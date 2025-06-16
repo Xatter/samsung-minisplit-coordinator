@@ -1,0 +1,23 @@
+{
+  "name": "matter-thermostat-server",
+  "version": "1.0.0",
+  "description": "Matter server with Left and Right thermostat controls",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts"
+  },
+  "keywords": ["matter", "thermostat", "typescript"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@matter/main": "^0.14.0",
+    "@matter/node": "^0.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
