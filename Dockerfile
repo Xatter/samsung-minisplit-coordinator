@@ -34,9 +34,8 @@ FROM node:22-bullseye-slim AS production
 # Create app directory
 WORKDIR /app
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S matter && \
-    adduser -S matter -u 1001
+# Skip user creation for Pi deployment simplicity
+# (For production deployments, consider adding non-root user)
 
 # Copy package files
 COPY package*.json ./
@@ -58,12 +57,10 @@ COPY views ./views
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Create data directory with proper permissions
-RUN mkdir -p /app/data && \
-    chown -R matter:matter /app
+# Create data directory 
+RUN mkdir -p /app/data
 
-# Switch to non-root user
-USER matter
+# Run as root for Pi deployment simplicity
 
 # Expose ports
 EXPOSE 3000 5540
