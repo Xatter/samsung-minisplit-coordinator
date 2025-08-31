@@ -43,6 +43,10 @@ export const config = {
             process.env.MINISPLIT_3_ROOM || 'Guest Bedroom',
             process.env.MINISPLIT_4_ROOM || 'Office',
         ],
+        lightingMonitor: {
+            enabled: process.env.LIGHTING_MONITOR_ENABLED === 'true',
+            checkIntervalMs: parseInt(process.env.LIGHTING_CHECK_INTERVAL_SECONDS || '60') * 1000,
+        },
     }
 };
 

@@ -233,6 +233,20 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
         }
     });
 
+    router.post('/coordinator/lighting/turn-off-all', requireAuth, async (req: Request, res: Response) => {
+        const coordinator = getCoordinator();
+        if (!coordinator) {
+            return res.status(404).json({ error: 'Coordinator not available' });
+        }
+        try {
+            const result = await coordinator.manualTurnOffAllLighting();
+            res.json(result);
+        } catch (error) {
+            console.error('Error turning off lighting:', error);
+            res.status(500).json({ error: 'Failed to turn off lighting' });
+        }
+    });
+
     // Add route to manually trigger device sync
     router.post('/coordinator/sync-devices', requireAuth, async (req: Request, res: Response) => {
         const coordinator = getCoordinator();

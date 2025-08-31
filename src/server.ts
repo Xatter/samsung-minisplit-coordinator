@@ -7,6 +7,7 @@ import { SmartThingsMatterBridge } from './smartthings/matter-bridge';
 import { HeatPumpCoordinator } from './coordinator/heat-pump-coordinator';
 import { StateManager } from './coordinator/state-manager';
 import { WeatherService } from './services/weather-service';
+import { LightingMonitor } from './services/lighting-monitor';
 
 const MATTER_PORT = config.server.matterPort;
 
@@ -387,13 +388,17 @@ async function main() {
                         config.coordinator.defaultMaxTemp
                     );
 
+                    // Initialize lighting monitor
+                    const lightingMonitor = new LightingMonitor(deviceManager);
+
                     // Initialize coordinator
                     coordinator = new HeatPumpCoordinator({
                         deviceIds: config.coordinator.miniSplitIds,
                         roomNames: config.coordinator.roomNames.slice(0, config.coordinator.miniSplitIds.length),
                         weatherService,
                         deviceManager,
-                        stateManager
+                        stateManager,
+                        lightingMonitor
                     });
                     globalCoordinator = coordinator;
 

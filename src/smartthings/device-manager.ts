@@ -207,4 +207,50 @@ export class SmartThingsDeviceManager {
     async switchDevice(deviceId: string, state: 'on' | 'off'): Promise<void> {
         await this.executeDeviceCommand(deviceId, 'switch', state);
     }
+
+    async hasLightingCapability(deviceId: string): Promise<boolean> {
+        const capabilities = await this.getDeviceCapabilities(deviceId);
+        return capabilities.some(cap => cap.id === 'samsungce.airConditionerLighting');
+    }
+
+    async getLightingStatus(deviceId: string): Promise<string | null> {
+        try {
+            const status = await this.getDeviceStatus(deviceId);
+            const lightingComponent = status.components.main?.['samsungce.airConditionerLighting'];
+            return lightingComponent?.lightingState?.value || null;
+        } catch (error) {
+            console.error(`Error getting lighting status for device ${deviceId}:`, error);
+            return null;
+        }
+    }
+
+    async turnOffLighting(deviceId: string): Promise<void> {
+        const hasCapability = await this.hasLightingCapability(deviceId);
+        if (!hasCapability) {
+            console.log(`Device ${deviceId} does not have lighting capability`);
+            return;
+        }
+
+        try {
+            await this.executeDeviceCommand(deviceId, 'samsungce.airConditionerLighting', 'setLightingState', ['off']);
+            console.log(`Turned off lighting for device ${deviceId}`);
+        } catch (error) {
+            console.error(`Failed to turn off lighting for device ${deviceId}:`, error);
+            throw error;
+        }
+    }
+
+    async getDevicesWithLighting(locationId?: string): Promise<SmartThingsDevice[]> {
+        const devices = await this.getDevices(locationId);
+        const devicesWithLighting = [];
+        
+        for (const device of devices) {
+            const hasLighting = await this.hasLightingCapability(device.deviceId);
+            if (hasLighting) {
+                devicesWithLighting.push(device);
+            }
+        }
+        
+        return devicesWithLighting;
+    }
 }

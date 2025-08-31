@@ -221,6 +221,30 @@
                 Last Updated: <%= status.lastWeatherUpdate.toLocaleString() %>
             </div>
         </div>
+
+        <div class="status-card">
+            <h3>💡 Lighting Monitor</h3>
+            <div>
+                <span class="status-indicator <%= status.lightingMonitor.isRunning ? 'status-running' : 'status-stopped' %>"></span>
+                <%= status.lightingMonitor.enabled ? (status.lightingMonitor.isRunning ? 'Active' : 'Enabled but Stopped') : 'Disabled' %>
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>Devices Monitored:</strong> <%= status.lightingMonitor.devicesWithLighting.length %>
+            </div>
+            <div style="margin-top: 5px;">
+                <strong>Total Checks:</strong> <%= status.lightingMonitor.totalChecks %>
+            </div>
+            <div style="margin-top: 5px;">
+                <strong>Lights Turned Off:</strong> <%= status.lightingMonitor.totalLightsOff %>
+            </div>
+            <div style="margin-top: 5px; font-size: 0.9em; color: #666;">
+                <% if (status.lightingMonitor.lastCheckTime > 0) { %>
+                    Last Check: <%= new Date(status.lightingMonitor.lastCheckTime).toLocaleString() %>
+                <% } else { %>
+                    No checks yet
+                <% } %>
+            </div>
+        </div>
     </div>
 
     <div class="controls">
@@ -253,6 +277,13 @@
             <div class="control-row">
                 <button class="btn btn-success" onclick="runCoordinationCycle()">Run Coordination Cycle</button>
                 <button class="btn btn-emergency" onclick="emergencyOff()">Emergency Off All Units</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Lighting Control</label>
+            <div class="control-row">
+                <button class="btn" onclick="turnOffAllLighting()">Turn Off All Lighting</button>
             </div>
         </div>
     </div>
@@ -406,6 +437,29 @@
                 }
             } catch (error) {
                 alert('Error executing emergency off: ' + error.message);
+            }
+        }
+
+        async function turnOffAllLighting() {
+            if (!confirm('Turn off lighting on all mini-split units?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/coordinator/lighting/turn-off-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert(`Lighting control completed!\n\nSuccess: ${result.success} devices\nFailed: ${result.failed} devices${result.errors.length > 0 ? '\n\nErrors:\n' + result.errors.join('\n') : ''}`);
+                    location.reload();
+                } else {
+                    alert('Failed to control lighting: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error controlling lighting: ' + error.message);
             }
         }
 

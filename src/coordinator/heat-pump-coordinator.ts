@@ -1,6 +1,7 @@
 import { StateManager, MiniSplitState } from './state-manager';
 import { WeatherService, WeatherData } from '../services/weather-service';
 import { SmartThingsDeviceManager } from '../smartthings/device-manager';
+import { LightingMonitor } from '../services/lighting-monitor';
 
 export interface CoordinatorConfig {
     deviceIds: string[]; // Array of 4 mini-split device IDs
@@ -8,6 +9,7 @@ export interface CoordinatorConfig {
     weatherService: WeatherService;
     deviceManager: SmartThingsDeviceManager;
     stateManager: StateManager;
+    lightingMonitor: LightingMonitor;
 }
 
 export interface CoordinationResult {
@@ -67,6 +69,13 @@ export class HeatPumpCoordinator {
         this.isRunning = true;
         console.log('Starting Heat Pump Coordinator...');
 
+        // Start lighting monitor
+        try {
+            await this.config.lightingMonitor.start();
+        } catch (error) {
+            console.error('Error starting lighting monitor:', error);
+        }
+
         // Initial sync of all devices
         await this.syncDeviceStates();
 
@@ -91,6 +100,13 @@ export class HeatPumpCoordinator {
         if (this.coordinationTimer) {
             clearInterval(this.coordinationTimer);
             this.coordinationTimer = null;
+        }
+
+        // Stop lighting monitor
+        try {
+            await this.config.lightingMonitor.stop();
+        } catch (error) {
+            console.error('Error stopping lighting monitor:', error);
         }
 
         this.isRunning = false;
@@ -474,6 +490,7 @@ export class HeatPumpCoordinator {
         const state = this.config.stateManager.getSystemState();
         const onlineUnits = this.config.stateManager.getOnlineMiniSplits();
         const conflicts = this.config.stateManager.getUnresolvedConflicts();
+        const lightingStatus = this.config.lightingMonitor.getStatus();
         
         return {
             isRunning: this.isRunning,
@@ -485,7 +502,25 @@ export class HeatPumpCoordinator {
             onlineUnits: onlineUnits.length,
             totalUnits: this.config.deviceIds.length,
             unresolvedConflicts: conflicts.length,
-            weatherCacheValid: this.config.weatherService.isCacheValid()
+            weatherCacheValid: this.config.weatherService.isCacheValid(),
+            lightingMonitor: lightingStatus
         };
+    }
+
+    // Lighting monitor methods
+    public getLightingMonitorStatus() {
+        return this.config.lightingMonitor.getStatus();
+    }
+
+    public async manualTurnOffAllLighting() {
+        return await this.config.lightingMonitor.manualTurnOffAllLighting();
+    }
+
+    public async refreshLightingDevices() {
+        return await this.config.lightingMonitor.refreshDevices();
+    }
+
+    public getLightingRecentEvents(count: number = 20) {
+        return this.config.lightingMonitor.getRecentEvents(count);
     }
 }
