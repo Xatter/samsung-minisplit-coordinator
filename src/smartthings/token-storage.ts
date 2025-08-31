@@ -11,7 +11,7 @@ export interface TokenStore {
 
 export class TokenStorage {
     private readonly tokenFilePath: string;
-    private readonly encryptionKey: string;
+    private readonly encryptionKey: Buffer;
 
     constructor(dataDir: string = './data', encryptionSecret: string) {
         // Ensure data directory exists
@@ -21,17 +21,16 @@ export class TokenStorage {
 
         this.tokenFilePath = join(dataDir, 'smartthings-tokens.json');
         
-        // Create a consistent 32-byte key from the secret
-        this.encryptionKey = createHash('sha256').update(encryptionSecret).digest('hex').substring(0, 32);
+        // Create a consistent 32-byte key from the secret (sha256 produces 32 bytes)
+        this.encryptionKey = createHash('sha256').update(encryptionSecret).digest();
     }
 
     private encrypt(text: string): string {
         try {
             const algorithm = 'aes-256-cbc';
             const iv = randomBytes(16);
-            // Use createCipheriv with proper key buffer and IV
-            const keyBuffer = Buffer.from(this.encryptionKey, 'hex').slice(0, 32);
-            const cipher = createCipheriv(algorithm, keyBuffer, iv);
+            // encryptionKey is already a Buffer of exactly 32 bytes
+            const cipher = createCipheriv(algorithm, this.encryptionKey, iv);
             
             let encrypted = cipher.update(text, 'utf8', 'hex');
             encrypted += cipher.final('hex');
@@ -48,9 +47,8 @@ export class TokenStorage {
             const algorithm = 'aes-256-cbc';
             const [ivHex, encryptedText] = encryptedData.split(':');
             const iv = Buffer.from(ivHex, 'hex');
-            // Use createDecipheriv with proper key buffer and IV
-            const keyBuffer = Buffer.from(this.encryptionKey, 'hex').slice(0, 32);
-            const decipher = createDecipheriv(algorithm, keyBuffer, iv);
+            // encryptionKey is already a Buffer of exactly 32 bytes
+            const decipher = createDecipheriv(algorithm, this.encryptionKey, iv);
             
             let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
             decrypted += decipher.final('utf8');
