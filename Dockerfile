@@ -45,9 +45,10 @@ COPY package*.json ./
 RUN npm config set fetch-retry-maxtimeout 600000 && \
     npm config set maxsockets 1
 
-# Install production dependencies
-# Disable audit to avoid network timeout crashes on Pi
-RUN npm install --omit=dev --no-audit --verbose && npm cache clean --force
+# Install production dependencies using cached packages from builder stage
+# Copy node_modules from builder and then clean up dev dependencies
+COPY --from=builder /app/node_modules ./node_modules
+RUN npm prune --omit=dev --verbose && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
