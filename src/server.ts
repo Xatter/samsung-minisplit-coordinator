@@ -1,6 +1,6 @@
-import { ServerNode } from "@matter/main";
+import { ServerNode, Environment } from "@matter/main";
 import { ThermostatDevice } from "@matter/main/devices";
-import { ThermostatServer } from "@matter/main/behaviors";
+import { ThermostatServer, BasicInformationServer } from "@matter/main/behaviors";
 import { config, validateConfig, validateCoordinatorConfig, validateWeatherConfig } from './config';
 import { AdminServer } from './web/app';
 import { SmartThingsMatterBridge } from './smartthings/matter-bridge';
@@ -21,7 +21,18 @@ interface MatterServerInfo {
 }
 
 async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?: HeatPumpCoordinator): Promise<MatterServerInfo> {
-    const server = await ServerNode.create();
+    // Configure Matter storage for persistence across restarts
+    await Environment.default.vars.set('storage.path', './data/matter-storage');
+    
+    const server = await ServerNode.create({
+        id: "heat-pump-controller", 
+        network: { port: MATTER_PORT },
+        basicInformation: {
+            vendorName: "Heat Pump Controller",
+            productName: "Heat Pump Thermostat",
+            serialNumber: "HPC-001"
+        }
+    });
     let stateUpdateTimer: NodeJS.Timeout | null = null;
 
     if (coordinator) {
@@ -41,7 +52,13 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
         // Set initial values from coordinator state
         if (thermostatBehavior) {
             const status = coordinator.getCoordinatorStatus();
-            const avgCurrentTemp = coordinator['config'].stateManager.getAverageCurrentTemperature();
+            let avgCurrentTemp = coordinator['config'].stateManager.getAverageCurrentTemperature();
+            
+            // Validate temperature - if it's 0, NaN, or undefined, use a reasonable default
+            if (!avgCurrentTemp || avgCurrentTemp === 0 || isNaN(avgCurrentTemp)) {
+                console.warn(`Invalid average temperature (${avgCurrentTemp}°F), using 70°F default`);
+                avgCurrentTemp = 70;
+            }
             
             console.log(`Initial thermostat setup - Average temperature: ${avgCurrentTemp}°F`);
             
@@ -68,7 +85,13 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
             stateUpdateTimer = setInterval(async () => {
                 try {
                     const status = coordinator.getCoordinatorStatus();
-                    const avgCurrentTemp = coordinator['config'].stateManager.getAverageCurrentTemperature();
+                    let avgCurrentTemp = coordinator['config'].stateManager.getAverageCurrentTemperature();
+                    
+                    // Validate temperature - if it's 0, NaN, or undefined, skip this update
+                    if (!avgCurrentTemp || avgCurrentTemp === 0 || isNaN(avgCurrentTemp)) {
+                        console.warn(`Invalid average temperature (${avgCurrentTemp}°F) during update, skipping temperature update`);
+                        return;
+                    }
                     
                     const tempCelsius = (avgCurrentTemp - 32) * 5 / 9;
                     thermostatBehavior.state.localTemperature = Math.round(tempCelsius * 100);
@@ -164,78 +187,16 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
         return { server, commissioning, stateUpdateTimer };
 
     } else {
-        // Fallback to individual thermostats if no coordinator
-        const leftThermostat = await server.add(ThermostatDevice.with(
-            ThermostatServer.with("Heating", "Cooling", "AutoMode")
-        ), {
-            id: "left-thermostat",
-            thermostat: {
-                controlSequenceOfOperation: 4,
-                minSetpointDeadBand: 25,
-            },
-        });
-
-        const rightThermostat = await server.add(ThermostatDevice.with(
-            ThermostatServer.with("Heating", "Cooling", "AutoMode")
-        ), {
-            id: "right-thermostat",
-            thermostat: {
-                controlSequenceOfOperation: 4,
-                minSetpointDeadBand: 25,
-            },
-        });
-
-        if (bridge) {
-            const leftThermostatBehavior = (leftThermostat as any).behaviors.require(ThermostatServer);
-            const rightThermostatBehavior = (rightThermostat as any).behaviors.require(ThermostatServer);
-
-            if (leftThermostatBehavior) {
-                leftThermostatBehavior.events.heatingSetpoint$Changed.on(async (value: any) => {
-                    console.log(`Left thermostat heating setpoint changed: ${value}`);
-                    await bridge.handleMatterCommand("left-thermostat", "setHeatingSetpoint", [value]);
-                });
-
-                leftThermostatBehavior.events.coolingSetpoint$Changed.on(async (value: any) => {
-                    console.log(`Left thermostat cooling setpoint changed: ${value}`);
-                    await bridge.handleMatterCommand("left-thermostat", "setCoolingSetpoint", [value]);
-                });
-
-                leftThermostatBehavior.events.systemMode$Changed.on(async (value: any) => {
-                    console.log(`Left thermostat mode changed: ${value}`);
-                    await bridge.handleMatterCommand("left-thermostat", "setThermostatMode", [value]);
-                });
-            }
-
-            if (rightThermostatBehavior) {
-                rightThermostatBehavior.events.heatingSetpoint$Changed.on(async (value: any) => {
-                    console.log(`Right thermostat heating setpoint changed: ${value}`);
-                    await bridge.handleMatterCommand("right-thermostat", "setHeatingSetpoint", [value]);
-                });
-
-                rightThermostatBehavior.events.coolingSetpoint$Changed.on(async (value: any) => {
-                    console.log(`Right thermostat cooling setpoint changed: ${value}`);
-                    await bridge.handleMatterCommand("right-thermostat", "setCoolingSetpoint", [value]);
-                });
-
-                rightThermostatBehavior.events.systemMode$Changed.on(async (value: any) => {
-                    console.log(`Right thermostat mode changed: ${value}`);
-                    await bridge.handleMatterCommand("right-thermostat", "setThermostatMode", [value]);
-                });
-            }
-        }
-
+        // No coordinator available - just create an empty server
+        console.log("No coordinator available - coordinator required for thermostat functionality");
+        
         await server.start();
 
-        console.log(`Matter server started on port ${MATTER_PORT}`);
-        console.log("Devices added:");
-        console.log("- Left Thermostat (ID: left-thermostat)");
-        console.log("- Right Thermostat (ID: right-thermostat)");
-        console.log("Ready for commissioning...");
+        console.log(`Matter server started on port ${MATTER_PORT} (coordinator mode only)`);
+        console.log("Please configure and enable the Heat Pump Coordinator to add thermostat devices");
         
         return { server, stateUpdateTimer: null };
     }
-
-    return { server, stateUpdateTimer: null };
 }
 
 // Global variables for cleanup
