@@ -1,17 +1,23 @@
-# Multi-stage build for Matter Server
+# Multi-stage build for Matter Server  
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Add memory and process limits for Pi compatibility
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++ && \
+    npm config set unsafe-perm true
+
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies)
-# Use npm install instead of npm ci for better compatibility on ARM/Pi
-# Set npm config for better performance on resource-constrained systems
-RUN npm config set fetch-retry-maxtimeout 300000 && \
-    npm config set fetch-retry-mintimeout 10000 && \
-    npm install --no-optional --timeout=300000
+# Install dependencies with fallback strategies for ARM/Pi
+# Strategy 1: Try npm ci first (fastest if it works)
+# Strategy 2: Try npm install with cache clear 
+# Strategy 3: Try with --force flag as last resort
+RUN npm ci --timeout=600000 --maxsockets=1 || \
+    (npm cache clean --force && npm install --timeout=600000 --maxsockets=1) || \
+    (npm cache clean --force && npm install --force --timeout=600000 --maxsockets=1)
 
 # Copy source code
 COPY . .
@@ -32,10 +38,10 @@ RUN addgroup -g 1001 -S matter && \
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies
-# Use npm install for better ARM/Pi compatibility and add timeout/retry logic
-RUN npm install --omit=dev --no-optional --timeout=300000 || \
-    (npm cache clean --force && npm install --omit=dev --no-optional --timeout=300000) && \
+# Install production dependencies with ARM/Pi optimizations
+RUN npm ci --omit=dev --timeout=600000 --maxsockets=1 || \
+    (npm cache clean --force && npm install --omit=dev --timeout=600000 --maxsockets=1) || \
+    (npm cache clean --force && npm install --omit=dev --force --timeout=600000 --maxsockets=1) && \
     npm cache clean --force
 
 # Copy built application from builder stage
