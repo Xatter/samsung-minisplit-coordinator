@@ -36,7 +36,6 @@ COPY --from=builder /app/dist ./dist
 
 # Copy static assets and views
 COPY views ./views
-COPY public ./public
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/
