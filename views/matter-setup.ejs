@@ -199,10 +199,23 @@
                 </div>
             </div>
         <% } else { %>
-            <div class="status commissioned">
-                <h3>✅ Device Already Commissioned</h3>
-                <p>Your Matter device appears to be already added to HomeKit. If you need to recommission it, you may need to reset the device first.</p>
-            </div>
+            <% if (typeof wasResetRecently !== 'undefined' && wasResetRecently) { %>
+                <div class="status">
+                    <h3>🔄 Server Restart Required</h3>
+                    <p>The device has been reset successfully. Please restart the server to generate new commissioning codes.</p>
+                    <p><strong>Instructions:</strong></p>
+                    <ol style="text-align: left; display: inline-block;">
+                        <li>Stop the server (Ctrl+C)</li>
+                        <li>Start the server again</li>
+                        <li>Refresh this page to see the new QR code</li>
+                    </ol>
+                </div>
+            <% } else { %>
+                <div class="status commissioned">
+                    <h3>✅ Device Already Commissioned</h3>
+                    <p>Your Matter device appears to be already added to HomeKit. If you need to recommission it, you may need to reset the device first.</p>
+                </div>
+            <% } %>
         <% } %>
 
         <div class="device-info">

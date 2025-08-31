@@ -25,6 +25,7 @@ export class AdminServer {
     private smartapp: MatterSmartApp;
     private coordinator?: HeatPumpCoordinator;
     private matterCommissioning?: { qrCode?: string; manualCode?: string };
+    private wasResetRecently = false;
 
     constructor() {
         this.app = express();
@@ -78,7 +79,8 @@ export class AdminServer {
                 title: 'Matter/HomeKit Setup',
                 currentPage: 'matter',
                 showCoordinator: !!this.coordinator,
-                commissioning: this.matterCommissioning || {}
+                commissioning: this.matterCommissioning || {},
+                wasResetRecently: this.wasResetRecently
             });
         });
 
@@ -103,8 +105,9 @@ export class AdminServer {
                     console.warn('⚠️ Failed to recreate Matter storage:', error);
                 }
                 
-                // Clear commissioning data
+                // Clear commissioning data and set reset flag
                 this.matterCommissioning = {};
+                this.wasResetRecently = true;
                 
                 // Send success response
                 res.json({ 
@@ -163,6 +166,7 @@ export class AdminServer {
 
     public setMatterCommissioning(commissioning: { qrCode?: string; manualCode?: string }): void {
         this.matterCommissioning = commissioning;
+        this.wasResetRecently = false; // Clear reset flag when new commissioning data is available
     }
 
     public start(): Promise<void> {
