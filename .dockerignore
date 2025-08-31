@@ -1,12 +1,12 @@
-# Node.js
-node_modules/
+# Node.js logs only
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build outputs (will be created in container)
-dist/
-build/
+# Keep node_modules and dist for Pi deployments
+# node_modules/
+# dist/
+# build/
 *.tsbuildinfo
 
 # Logs
