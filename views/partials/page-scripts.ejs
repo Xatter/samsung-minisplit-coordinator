@@ -22,5 +22,65 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Matter setup page functions
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        alert('Setup code copied to clipboard!');
+    }, function(err) {
+        console.error('Could not copy text: ', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Setup code copied to clipboard!');
+    });
+}
+
+async function resetMatterDevice() {
+    const resetBtn = document.querySelector('.reset-btn');
+    const statusDiv = document.getElementById('resetStatus');
+    
+    // Confirm action
+    if (!confirm('Are you sure you want to reset the Matter device? This will require re-commissioning with HomeKit.')) {
+        return;
+    }
+    
+    // Disable button and show loading
+    resetBtn.disabled = true;
+    resetBtn.textContent = 'Resetting...';
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<div style="color: #667eea;">🔄 Resetting Matter device...</div>';
+    
+    try {
+        const response = await fetch('/matter/reset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            statusDiv.innerHTML = '<div style="color: #48bb78;">✅ ' + result.message + '</div>';
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            statusDiv.innerHTML = '<div style="color: #e53e3e;">❌ ' + result.message + '</div>';
+            resetBtn.disabled = false;
+            resetBtn.textContent = 'Reset Matter Device';
+        }
+    } catch (error) {
+        console.error('Reset error:', error);
+        statusDiv.innerHTML = '<div style="color: #e53e3e;">❌ Failed to reset device. Please try again.</div>';
+        resetBtn.disabled = false;
+        resetBtn.textContent = 'Reset Matter Device';
+    }
+}
 </script>
 <% } %>
