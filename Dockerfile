@@ -9,8 +9,8 @@ RUN npm config set fetch-retry-maxtimeout 600000 && \
     npm config set maxsockets 1
 
 # Try to install build dependencies, but don't fail if unavailable
-RUN apk update && \
-    (apk add --no-cache python3 make g++ build-base || echo "Build tools installation failed, proceeding without native compilation support")
+RUN (apk update || echo "Package update failed") && \
+    (apk add --no-cache python3 make g++ build-base || echo "Build tools installation failed, proceeding without native compilation support") || true
 
 # Copy package files
 COPY package*.json ./
