@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - SmartThings Matter Bridge</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .device-card:hover {
+            transform: translateY(-2px);
+            transition: transform 0.2s ease-in-out;
+        }
+        .status-indicator.status-online {
+            color: #28a745;
+        }
+        .status-indicator.status-offline {
+            color: #dc3545;
+        }
+        .temperature-display {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .capability-badge {
+            font-size: 0.7rem;
+            margin: 2px 0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-house-gear"></i> SmartThings Matter Bridge
+            </a>
+            <div class="navbar-nav ms-auto">
+                <form action="/auth/logout" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-outline-light">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-house-gear"></i> SmartThings Devices</h2>
+    <button class="btn btn-outline-primary" onclick="refreshDevices()">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+</div>
+
+<% if (locations && locations.length > 0) { %>
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4>Locations</h4>
+            <div class="row">
+                <% locations.forEach(location => { %>
+                    <div class="col-md-4 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title"><%= location.name %></h6>
+                                <small class="text-muted">ID: <%= location.locationId %></small>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+<% } %>
+
+<% if (thermostats && thermostats.length > 0) { %>
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4><i class="bi bi-thermometer-half"></i> Thermostats</h4>
+            <div class="row">
+                <% thermostats.forEach(thermostat => { %>
+                    <div class="col-lg-6 mb-3">
+                        <div class="card device-card" data-device-id="<%= thermostat.deviceId %>">
+                            <div class="card-header d-flex justify-content-between">
+                                <strong><%= thermostat.label || thermostat.name %></strong>
+                                <span class="status-indicator status-online">
+                                    <i class="bi bi-circle-fill"></i> Online
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="text-center">
+                                            <div class="temperature-display" id="temp-<%= thermostat.deviceId %>">
+                                                --°F
+                                            </div>
+                                            <small class="text-muted">Current Temperature</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Set Temperature</label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" 
+                                                       id="setpoint-<%= thermostat.deviceId %>" 
+                                                       min="40" max="90" value="72">
+                                                <button class="btn btn-outline-secondary" type="button"
+                                                        onclick="setTemperature('<%= thermostat.deviceId %>')">
+                                                    Set
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Mode</label>
+                                            <select class="form-select" id="mode-<%= thermostat.deviceId %>"
+                                                    onchange="setMode('<%= thermostat.deviceId %>')">
+                                                <option value="off">Off</option>
+                                                <option value="heat">Heat</option>
+                                                <option value="cool">Cool</option>
+                                                <option value="auto">Auto</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        Device ID: <%= thermostat.deviceId %>
+                                        <% if (thermostat.roomId) { %>
+                                            | Room: <%= thermostat.roomId %>
+                                        <% } %>
+                                    </small>
+                                </div>
+                                <div class="mt-2">
+                                    <% thermostat.capabilities.forEach(cap => { %>
+                                        <span class="badge bg-secondary capability-badge me-1"><%= cap.id %></span>
+                                    <% }); %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+<% } %>
+
+<% if (switches && switches.length > 0) { %>
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4><i class="bi bi-toggle-on"></i> Switches</h4>
+            <div class="row">
+                <% switches.forEach(switchDevice => { %>
+                    <div class="col-lg-4 mb-3">
+                        <div class="card device-card" data-device-id="<%= switchDevice.deviceId %>">
+                            <div class="card-header d-flex justify-content-between">
+                                <strong><%= switchDevice.label || switchDevice.name %></strong>
+                                <span class="status-indicator status-online">
+                                    <i class="bi bi-circle-fill"></i> Online
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>Power State</span>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="switch-<%= switchDevice.deviceId %>"
+                                               onchange="toggleSwitch('<%= switchDevice.deviceId %>')">
+                                        <label class="form-check-label" for="switch-<%= switchDevice.deviceId %>">
+                                            <span id="switch-state-<%= switchDevice.deviceId %>">Unknown</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        Device ID: <%= switchDevice.deviceId %>
+                                        <% if (switchDevice.roomId) { %>
+                                            | Room: <%= switchDevice.roomId %>
+                                        <% } %>
+                                    </small>
+                                </div>
+                                <div class="mt-2">
+                                    <% switchDevice.capabilities.forEach(cap => { %>
+                                        <span class="badge bg-secondary capability-badge me-1"><%= cap.id %></span>
+                                    <% }); %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    </div>
+<% } %>
+
+<% if ((!thermostats || thermostats.length === 0) && (!switches || switches.length === 0)) { %>
+    <div class="alert alert-warning text-center">
+        <h4><i class="bi bi-exclamation-triangle"></i> No Compatible Devices Found</h4>
+        <p>No thermostats or switches were found in your SmartThings account. 
+           Make sure you have compatible devices added to your SmartThings hub.</p>
+    </div>
+<% } %>
+
+    </main>
+
+    <footer class="mt-5 py-4 bg-light text-center">
+        <div class="container">
+            <p class="text-muted mb-0">SmartThings Matter Bridge &copy; 2024</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+async function refreshDevices() {
+    window.location.reload();
+}
+
+async function setTemperature(deviceId) {
+    const temperature = document.getElementById(`setpoint-${deviceId}`).value;
+    try {
+        const response = await fetch(`/admin/thermostat/${deviceId}/temperature`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ temperature: parseInt(temperature) })
+        });
+        
+        if (response.ok) {
+            showToast('Temperature set successfully', 'success');
+            setTimeout(() => loadDeviceStatus(deviceId), 1000);
+        } else {
+            showToast('Failed to set temperature', 'error');
+        }
+    } catch (error) {
+        showToast('Error setting temperature', 'error');
+    }
+}
+
+async function setMode(deviceId) {
+    const mode = document.getElementById(`mode-${deviceId}`).value;
+    try {
+        const response = await fetch(`/admin/thermostat/${deviceId}/mode`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode })
+        });
+        
+        if (response.ok) {
+            showToast('Mode set successfully', 'success');
+        } else {
+            showToast('Failed to set mode', 'error');
+        }
+    } catch (error) {
+        showToast('Error setting mode', 'error');
+    }
+}
+
+async function toggleSwitch(deviceId) {
+    const checkbox = document.getElementById(`switch-${deviceId}`);
+    const state = checkbox.checked ? 'on' : 'off';
+    
+    try {
+        const response = await fetch(`/admin/switch/${deviceId}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state })
+        });
+        
+        if (response.ok) {
+            document.getElementById(`switch-state-${deviceId}`).textContent = 
+                state.charAt(0).toUpperCase() + state.slice(1);
+            showToast('Switch toggled successfully', 'success');
+        } else {
+            checkbox.checked = !checkbox.checked; // Revert on error
+            showToast('Failed to toggle switch', 'error');
+        }
+    } catch (error) {
+        checkbox.checked = !checkbox.checked; // Revert on error
+        showToast('Error toggling switch', 'error');
+    }
+}
+
+async function loadDeviceStatus(deviceId) {
+    try {
+        const response = await fetch(`/admin/device/${deviceId}/status`);
+        if (response.ok) {
+            const status = await response.json();
+            updateDeviceDisplay(deviceId, status);
+        }
+    } catch (error) {
+        console.error('Error loading device status:', error);
+    }
+}
+
+function updateDeviceDisplay(deviceId, status) {
+    const components = status.components;
+    if (components.main) {
+        if (components.main.temperatureMeasurement) {
+            const temp = components.main.temperatureMeasurement.temperature.value;
+            const unit = components.main.temperatureMeasurement.temperature.unit || 'F';
+            document.getElementById(`temp-${deviceId}`).textContent = `${temp}°${unit}`;
+        }
+        
+        if (components.main.switch) {
+            const switchState = components.main.switch.switch.value;
+            const checkbox = document.getElementById(`switch-${deviceId}`);
+            const stateLabel = document.getElementById(`switch-state-${deviceId}`);
+            
+            checkbox.checked = switchState === 'on';
+            stateLabel.textContent = switchState.charAt(0).toUpperCase() + switchState.slice(1);
+        }
+        
+        if (components.main.thermostat) {
+            const mode = components.main.thermostat.thermostatMode?.value;
+            if (mode) {
+                document.getElementById(`mode-${deviceId}`).value = mode;
+            }
+        }
+    }
+}
+
+function showToast(message, type) {
+    // Simple toast notification - you could use Bootstrap Toast or other library
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const toast = document.createElement('div');
+    toast.className = `alert ${alertClass} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '1050';
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Load initial device status
+document.addEventListener('DOMContentLoaded', () => {
+    <% if (thermostats) { %>
+        <% thermostats.forEach(thermostat => { %>
+            loadDeviceStatus('<%= thermostat.deviceId %>');
+        <% }); %>
+    <% } %>
+    
+    <% if (switches) { %>
+        <% switches.forEach(switchDevice => { %>
+            loadDeviceStatus('<%= switchDevice.deviceId %>');
+        <% }); %>
+    <% } %>
+});
+</script>
+</body>
+</html>
