@@ -20,7 +20,8 @@ RUN npm config set fetch-retry-maxtimeout 600000 && \
 COPY package*.json ./
 
 # Use a simpler, more reliable npm install approach
-RUN npm install --verbose
+# Disable audit to avoid network timeout crashes on Pi
+RUN npm install --no-audit --verbose
 
 # Copy source code
 COPY . .
@@ -45,7 +46,8 @@ RUN npm config set fetch-retry-maxtimeout 600000 && \
     npm config set maxsockets 1
 
 # Install production dependencies
-RUN npm install --omit=dev --verbose && npm cache clean --force
+# Disable audit to avoid network timeout crashes on Pi
+RUN npm install --omit=dev --no-audit --verbose && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
