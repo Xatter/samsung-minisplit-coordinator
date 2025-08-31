@@ -3,10 +3,14 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Add memory and process limits for Pi compatibility
-# Install build dependencies for native modules
-RUN apk add --no-cache python3 make g++ && \
-    npm config set unsafe-perm true
+# Set npm config for better Pi compatibility
+RUN npm config set unsafe-perm true && \
+    npm config set fetch-retry-maxtimeout 600000 && \
+    npm config set fetch-retry-mintimeout 10000
+
+# Try to install build dependencies, but don't fail if unavailable
+RUN apk update && \
+    (apk add --no-cache python3 make g++ build-base || echo "Build tools installation failed, proceeding without native compilation support")
 
 # Copy package files
 COPY package*.json ./
