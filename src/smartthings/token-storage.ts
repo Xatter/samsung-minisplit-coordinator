@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from 'fs';
 import { join, dirname } from 'path';
-import { createCipher, createDecipher, randomBytes, createHash } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
 
 export interface TokenStore {
     accessToken: string;
@@ -29,7 +29,9 @@ export class TokenStorage {
         try {
             const algorithm = 'aes-256-cbc';
             const iv = randomBytes(16);
-            const cipher = createCipher(algorithm, this.encryptionKey);
+            // Use createCipheriv with proper key buffer and IV
+            const keyBuffer = Buffer.from(this.encryptionKey, 'hex').slice(0, 32);
+            const cipher = createCipheriv(algorithm, keyBuffer, iv);
             
             let encrypted = cipher.update(text, 'utf8', 'hex');
             encrypted += cipher.final('hex');
@@ -45,7 +47,10 @@ export class TokenStorage {
         try {
             const algorithm = 'aes-256-cbc';
             const [ivHex, encryptedText] = encryptedData.split(':');
-            const decipher = createDecipher(algorithm, this.encryptionKey);
+            const iv = Buffer.from(ivHex, 'hex');
+            // Use createDecipheriv with proper key buffer and IV
+            const keyBuffer = Buffer.from(this.encryptionKey, 'hex').slice(0, 32);
+            const decipher = createDecipheriv(algorithm, keyBuffer, iv);
             
             let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
             decrypted += decipher.final('utf8');
@@ -59,6 +64,15 @@ export class TokenStorage {
 
     public saveTokens(tokens: TokenStore): void {
         try {
+            console.log(`Attempting to save tokens to: ${this.tokenFilePath}`);
+            
+            // Ensure directory exists
+            const dir = dirname(this.tokenFilePath);
+            if (!existsSync(dir)) {
+                console.log(`Creating directory: ${dir}`);
+                mkdirSync(dir, { recursive: true });
+            }
+            
             const tokenJson = JSON.stringify(tokens, null, 2);
             const encryptedData = this.encrypt(tokenJson);
             
@@ -71,9 +85,13 @@ export class TokenStorage {
                 console.warn('Could not set token file permissions:', chmodError);
             }
             
-            console.log('SmartThings tokens saved securely to disk');
+            console.log(`SmartThings tokens saved successfully to: ${this.tokenFilePath}`);
+            console.log(`File exists: ${existsSync(this.tokenFilePath)}`);
+            console.log(`File size: ${readFileSync(this.tokenFilePath, 'utf8').length} bytes`);
         } catch (error) {
             console.error('Error saving tokens to disk:', error);
+            console.error('Token file path:', this.tokenFilePath);
+            console.error('Directory exists:', existsSync(dirname(this.tokenFilePath)));
             throw new Error('Failed to save tokens to disk');
         }
     }
