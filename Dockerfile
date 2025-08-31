@@ -7,7 +7,11 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies)
-RUN npm ci
+# Use npm install instead of npm ci for better compatibility on ARM/Pi
+# Set npm config for better performance on resource-constrained systems
+RUN npm config set fetch-retry-maxtimeout 300000 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm install --no-optional --timeout=300000
 
 # Copy source code
 COPY . .
@@ -29,7 +33,10 @@ RUN addgroup -g 1001 -S matter && \
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Use npm install for better ARM/Pi compatibility and add timeout/retry logic
+RUN npm install --omit=dev --no-optional --timeout=300000 || \
+    (npm cache clean --force && npm install --omit=dev --no-optional --timeout=300000) && \
+    npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
