@@ -112,6 +112,7 @@ export class LightingMonitor {
             for (const deviceId of miniSplitIds) {
                 try {
                     const hasLighting = await this.deviceManager.hasLightingCapability(deviceId);
+                    console.log(`Device ${deviceId.substring(0, 8)}: lighting capability = ${hasLighting}`);
                     if (hasLighting) {
                         this.devicesWithLighting.push(deviceId);
                         console.log(`Device ${deviceId} has lighting capability`);
@@ -209,6 +210,7 @@ export class LightingMonitor {
         }
 
         console.log('Manual lighting turn off requested for all devices');
+        console.log(`Devices with lighting: ${this.devicesWithLighting.length}`);
 
         for (const deviceId of this.devicesWithLighting) {
             try {

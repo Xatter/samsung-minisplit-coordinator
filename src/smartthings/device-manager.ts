@@ -87,7 +87,7 @@ export class SmartThingsDeviceManager {
                 locationId: device.locationId!,
                 deviceTypeName: device.dth?.deviceTypeName || 'Unknown',
                 components: device.components || [],
-                capabilities: device.components?.[0]?.capabilities || [],
+                capabilities: device.components?.flatMap(comp => comp.capabilities || []) || [],
             }));
         } catch (error) {
             console.error('Error getting devices:', error);
@@ -126,7 +126,12 @@ export class SmartThingsDeviceManager {
             } as any);
         } catch (error) {
             console.error(`Error executing command ${command} on device ${deviceId}:`, error);
-            throw new Error(`Failed to execute command ${command} on device ${deviceId}`);
+            // Preserve the original error details for proper 422 detection
+            const newError = new Error(`Failed to execute command ${command} on device ${deviceId}`);
+            (newError as any).originalError = error;
+            (newError as any).status = (error as any).status;
+            (newError as any).response = (error as any).response;
+            throw newError;
         }
     }
 
@@ -231,13 +236,42 @@ export class SmartThingsDeviceManager {
             return;
         }
 
-        try {
-            await this.executeDeviceCommand(deviceId, 'samsungce.airConditionerLighting', 'setLightingState', ['off']);
-            console.log(`Turned off lighting for device ${deviceId}`);
-        } catch (error) {
-            console.error(`Failed to turn off lighting for device ${deviceId}:`, error);
-            throw error;
+        // Try different command names and capabilities
+        const commandsToTry = [
+            // Samsung execute capability (discovered from community forums)
+            { capability: 'execute', command: 'execute', args: ['mode/vs/0', {'x.com.samsung.da.options': ['Light_On']}] },
+            // Original samsungce.airConditionerLighting attempts
+            { capability: 'samsungce.airConditionerLighting', command: 'setLighting', args: ['off'] },
+            { capability: 'samsungce.airConditionerLighting', command: 'setAirConditionerLighting', args: ['off'] },
+            { capability: 'samsungce.airConditionerLighting', command: 'lightingOff', args: [] },
+            { capability: 'samsungce.airConditionerLighting', command: 'setLightingState', args: [false] },
+            { capability: 'samsungce.airConditionerLighting', command: 'setLighting', args: [false] },
+        ];
+
+        for (const { capability, command, args } of commandsToTry) {
+            try {
+                console.log(`Trying ${capability}:${command} with args:`, args);
+                await this.executeDeviceCommand(deviceId, capability, command, args);
+                console.log(`Successfully turned off lighting for device ${deviceId} using ${capability}:${command}`);
+                return;
+            } catch (error: any) {
+                // Check multiple ways the 422 status could be present in the error
+                const is422Error = error.status === 422 || 
+                                   error.response?.status === 422 ||
+                                   error.message?.includes('422') ||
+                                   (error.message && error.message.includes('status code 422'));
+                
+                if (is422Error) {
+                    console.log(`Command ${capability}:${command} failed (422 - invalid command), trying next...`);
+                    continue;
+                } else {
+                    console.error(`Command ${capability}:${command} failed with non-422 error:`, error.message);
+                    throw error;
+                }
+            }
         }
+
+        throw new Error(`All lighting commands failed for device ${deviceId}`);
     }
 
     async getDevicesWithLighting(locationId?: string): Promise<SmartThingsDevice[]> {
