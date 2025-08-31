@@ -5,9 +5,8 @@ services:
       dockerfile: Dockerfile
     container_name: matter-server
     restart: unless-stopped
-    ports:
-      - "3000:3000"    # Admin web interface
-      - "5540:5540"    # Matter protocol
+    network_mode: host    # Use host networking for proper routing with VPN
+    # ports not needed with host mode - container uses host's network directly
     volumes:
       # Mount data directory for persistent storage
       - ./data:/app/data
@@ -18,8 +17,6 @@ services:
       - DATA_DIR=/app/data
       # Ensure encryption key is available for token storage
       - SESSION_SECRET=${SESSION_SECRET:-default-secret-change-in-production}
-    networks:
-      - matter-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s
@@ -27,9 +24,10 @@ services:
       retries: 3
       start_period: 10s
 
-networks:
-  matter-network:
-    driver: bridge
+# Networks section not needed with host mode
+# networks:
+#   matter-network:
+#     driver: bridge
 
 # Optional: If you want to use named volumes instead of bind mounts
 # volumes:
