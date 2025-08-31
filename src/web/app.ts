@@ -2,6 +2,7 @@ import express from 'express';
 import session from 'express-session';
 import path from 'path';
 import expressLayouts from 'express-ejs-layouts';
+import { promises as fs } from 'fs';
 import { config } from '../config';
 import { SmartThingsOAuth, TokenStore } from '../smartthings/oauth';
 import { SmartThingsDeviceManager } from '../smartthings/device-manager';
@@ -79,6 +80,47 @@ export class AdminServer {
                 showCoordinator: !!this.coordinator,
                 commissioning: this.matterCommissioning || {}
             });
+        });
+
+        this.app.post('/matter/reset', async (req, res) => {
+            try {
+                console.log('🔄 Resetting Matter device commissioning state...');
+                
+                // Remove Matter storage directory
+                const matterStoragePath = './data/matter-storage';
+                try {
+                    await fs.rm(matterStoragePath, { recursive: true, force: true });
+                    console.log('✅ Matter storage cleared');
+                } catch (error) {
+                    console.warn('⚠️ Failed to clear Matter storage:', error);
+                }
+                
+                // Recreate empty storage directory
+                try {
+                    await fs.mkdir(matterStoragePath, { recursive: true });
+                    console.log('✅ Matter storage directory recreated');
+                } catch (error) {
+                    console.warn('⚠️ Failed to recreate Matter storage:', error);
+                }
+                
+                // Clear commissioning data
+                this.matterCommissioning = {};
+                
+                // Send success response
+                res.json({ 
+                    success: true, 
+                    message: 'Matter device reset successfully. Restart the service to get new commissioning codes.' 
+                });
+                
+                console.log('🔄 Matter device reset complete - service restart required for new commissioning codes');
+                
+            } catch (error) {
+                console.error('❌ Error resetting Matter device:', error);
+                res.status(500).json({ 
+                    success: false, 
+                    message: 'Failed to reset Matter device' 
+                });
+            }
         });
 
         this.app.get('/health', (req, res) => {

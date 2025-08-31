@@ -128,6 +128,36 @@
         .copy-btn:hover {
             background: #5a67d8;
         }
+        .reset-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 20px 0;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover {
+            background: #c53030;
+        }
+        .reset-btn:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        .reset-section {
+            background: #fef5e7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border-left: 4px solid #f56565;
+            text-align: center;
+        }
+        .reset-section h3 {
+            color: #e53e3e;
+            margin-top: 0;
+        }
     </style>
 </style>
 
@@ -239,6 +269,14 @@
             <p>The system will coordinate all your mini-split units to maintain temperatures within this range while preventing conflicting heating/cooling modes.</p>
         </div>
 
+        <div class="reset-section">
+            <h3>🔄 Device Reset</h3>
+            <p>If you need to remove and re-add the device to HomeKit, use this reset button to clear the commissioning state.</p>
+            <p><strong>Warning:</strong> This will remove the device from HomeKit and require re-commissioning.</p>
+            <button class="reset-btn" onclick="resetMatterDevice()">Reset Matter Device</button>
+            <div id="resetStatus" style="margin-top: 15px; display: none;"></div>
+        </div>
+
     <script>
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(function() {
@@ -254,5 +292,48 @@
                 document.body.removeChild(textArea);
                 alert('Setup code copied to clipboard!');
             });
+        }
+
+        async function resetMatterDevice() {
+            const resetBtn = document.querySelector('.reset-btn');
+            const statusDiv = document.getElementById('resetStatus');
+            
+            // Confirm action
+            if (!confirm('Are you sure you want to reset the Matter device? This will require re-commissioning with HomeKit.')) {
+                return;
+            }
+            
+            // Disable button and show loading
+            resetBtn.disabled = true;
+            resetBtn.textContent = 'Resetting...';
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<div style="color: #667eea;">🔄 Resetting Matter device...</div>';
+            
+            try {
+                const response = await fetch('/matter/reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusDiv.innerHTML = '<div style="color: #48bb78;">✅ ' + result.message + '</div>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    statusDiv.innerHTML = '<div style="color: #e53e3e;">❌ ' + result.message + '</div>';
+                    resetBtn.disabled = false;
+                    resetBtn.textContent = 'Reset Matter Device';
+                }
+            } catch (error) {
+                console.error('Reset error:', error);
+                statusDiv.innerHTML = '<div style="color: #e53e3e;">❌ Failed to reset device. Please try again.</div>';
+                resetBtn.disabled = false;
+                resetBtn.textContent = 'Reset Matter Device';
+            }
         }
     </script>
