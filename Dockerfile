@@ -3,10 +3,10 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Set npm config for better Pi compatibility
-RUN npm config set unsafe-perm true && \
-    npm config set fetch-retry-maxtimeout 600000 && \
-    npm config set fetch-retry-mintimeout 10000
+# Set npm config for better Pi compatibility (remove deprecated unsafe-perm)
+RUN npm config set fetch-retry-maxtimeout 600000 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set maxsockets 1
 
 # Try to install build dependencies, but don't fail if unavailable
 RUN apk update && \
