@@ -146,7 +146,10 @@
                     <h3>📱 Scan QR Code</h3>
                     <p>Open the Home app on your iPhone/iPad and scan this QR code:</p>
                     <% if (commissioning.qrCode) { %>
-                        <div class="qr-code"><%= commissioning.qrCode %></div>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                            <canvas id="qrcode-canvas" style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></canvas>
+                            <div class="qr-code" style="font-size: 10px; color: #666;">Raw: <%= commissioning.qrCode %></div>
+                        </div>
                     <% } else { %>
                         <div class="status">QR Code not available - device may already be commissioned</div>
                     <% } %>

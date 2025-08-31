@@ -1,1 +1,26 @@
 <!-- Additional page-specific scripts can be included here -->
+<% if (typeof currentPage !== 'undefined' && currentPage === 'matter') { %>
+<!-- QR Code Generation Library for Matter Setup Page -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script>
+// Generate QR code if canvas element exists
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('qrcode-canvas');
+    if (canvas && '<%= commissioning.qrCode %>') {
+        QRCode.toCanvas(canvas, '<%= commissioning.qrCode %>', {
+            width: 200,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        }, function (error) {
+            if (error) {
+                console.error('QR Code generation failed:', error);
+                canvas.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+<% } %>
