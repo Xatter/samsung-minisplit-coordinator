@@ -246,10 +246,15 @@ export class StateManager {
 
     public getAverageCurrentTemperature(): number {
         const onlineUnits = this.getOnlineMiniSplits();
-        if (onlineUnits.length === 0) return 70; // Default fallback
+        if (onlineUnits.length === 0) {
+            console.log('No online mini-splits, returning default temperature: 70°F');
+            return 70; // Default fallback
+        }
 
         const totalCurrent = onlineUnits.reduce((sum, unit) => sum + unit.currentTemperature, 0);
-        return totalCurrent / onlineUnits.length;
+        const average = totalCurrent / onlineUnits.length;
+        console.log(`Average temperature from ${onlineUnits.length} online units: ${average}°F (Units: ${onlineUnits.map(u => `${u.name}:${u.currentTemperature}°F`).join(', ')})`);
+        return average;
     }
 
     private addModeChangeEvent(deviceId: string | undefined, previousMode: string, newMode: string, reason: ModeChangeEvent['reason'], outsideTemp?: number): void {

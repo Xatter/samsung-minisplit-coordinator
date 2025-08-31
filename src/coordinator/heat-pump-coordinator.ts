@@ -188,13 +188,19 @@ export class HeatPumpCoordinator {
                     };
 
                     if (mainComponent.temperatureMeasurement?.temperature) {
-                        updates.currentTemperature = mainComponent.temperatureMeasurement.temperature.value;
+                        // SmartThings returns temperature in Celsius, convert to Fahrenheit
+                        const tempCelsius = mainComponent.temperatureMeasurement.temperature.value;
+                        updates.currentTemperature = Math.round((tempCelsius * 9/5) + 32);
                     }
 
                     if (mainComponent.thermostatHeatingSetpoint?.heatingSetpoint) {
-                        updates.targetTemperature = mainComponent.thermostatHeatingSetpoint.heatingSetpoint.value;
+                        // SmartThings returns temperature in Celsius, convert to Fahrenheit
+                        const tempCelsius = mainComponent.thermostatHeatingSetpoint.heatingSetpoint.value;
+                        updates.targetTemperature = Math.round((tempCelsius * 9/5) + 32);
                     } else if (mainComponent.thermostatCoolingSetpoint?.coolingSetpoint) {
-                        updates.targetTemperature = mainComponent.thermostatCoolingSetpoint.coolingSetpoint.value;
+                        // SmartThings returns temperature in Celsius, convert to Fahrenheit
+                        const tempCelsius = mainComponent.thermostatCoolingSetpoint.coolingSetpoint.value;
+                        updates.targetTemperature = Math.round((tempCelsius * 9/5) + 32);
                     }
 
                     if (mainComponent.thermostat?.thermostatMode) {

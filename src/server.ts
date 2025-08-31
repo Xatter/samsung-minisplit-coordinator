@@ -43,9 +43,13 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
             const status = coordinator.getCoordinatorStatus();
             const avgCurrentTemp = coordinator['config'].stateManager.getAverageCurrentTemperature();
             
+            console.log(`Initial thermostat setup - Average temperature: ${avgCurrentTemp}°F`);
+            
             try {
                 // Set initial state values
-                thermostatBehavior.state.localTemperature = Math.round(((avgCurrentTemp - 32) * 5 / 9) * 100); // Convert °F to °C * 100
+                const tempCelsius = (avgCurrentTemp - 32) * 5 / 9;
+                thermostatBehavior.state.localTemperature = Math.round(tempCelsius * 100); // Convert °F to °C * 100
+                console.log(`Setting Matter thermostat temperature: ${avgCurrentTemp}°F → ${tempCelsius.toFixed(1)}°C → ${Math.round(tempCelsius * 100)} (Matter units)`);
                 thermostatBehavior.state.occupiedHeatingSetpoint = Math.round(((status.globalRange.min - 32) * 5 / 9) * 100);
                 thermostatBehavior.state.occupiedCoolingSetpoint = Math.round(((status.globalRange.max - 32) * 5 / 9) * 100);
                 
@@ -66,7 +70,9 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                     const status = coordinator.getCoordinatorStatus();
                     const avgCurrentTemp = coordinator['config'].stateManager.getAverageCurrentTemperature();
                     
-                    thermostatBehavior.state.localTemperature = Math.round(((avgCurrentTemp - 32) * 5 / 9) * 100);
+                    const tempCelsius = (avgCurrentTemp - 32) * 5 / 9;
+                    thermostatBehavior.state.localTemperature = Math.round(tempCelsius * 100);
+                    console.log(`Updating Matter thermostat: ${avgCurrentTemp}°F → ${tempCelsius.toFixed(1)}°C → ${Math.round(tempCelsius * 100)} (Matter units)`);
                     thermostatBehavior.state.occupiedHeatingSetpoint = Math.round(((status.globalRange.min - 32) * 5 / 9) * 100);
                     thermostatBehavior.state.occupiedCoolingSetpoint = Math.round(((status.globalRange.max - 32) * 5 / 9) * 100);
                     
@@ -80,6 +86,8 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                     console.error('Error updating thermostat state:', error);
                 }
             }, 30000); // Update every 30 seconds
+            
+            console.log(`Started Matter thermostat state update timer (30s interval)`);
         }
 
         if (thermostatBehavior && bridge) {
