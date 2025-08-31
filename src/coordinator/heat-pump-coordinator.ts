@@ -50,7 +50,7 @@ export class HeatPumpCoordinator {
                 this.config.stateManager.updateMiniSplitState(deviceId, {
                     name: `${roomName} Mini-Split`,
                     room: roomName,
-                    priority: i === 0 ? 8 : 5, // First unit (living room?) gets higher priority
+                    priority: 5, // Dynamic priority based on distance from setpoint range
                     mode: 'off',
                     currentTemperature: 70,
                     targetTemperature: 70,
@@ -217,57 +217,64 @@ export class HeatPumpCoordinator {
         const state = this.config.stateManager.getSystemState();
         const preferences = this.config.stateManager.getUserPreferences();
         
-        // Check if weather-based mode is disabled
-        if (!preferences.weatherBasedModeEnabled) {
-            return state.globalMode as 'heat' | 'cool' | 'off';
-        }
-
         // Get active schedule
         const activeSchedule = this.config.stateManager.getActiveSchedule();
         const targetMinTemp = activeSchedule?.targetMinTemp || state.globalMinTemp;
         const targetMaxTemp = activeSchedule?.targetMaxTemp || state.globalMaxTemp;
         
-        const averageDesired = (targetMinTemp + targetMaxTemp) / 2;
-        const outsideTemp = weather.temperature;
-        const hysteresis = preferences.modeHysteresis;
-        const currentMode = state.globalMode;
+        const onlineUnits = this.config.stateManager.getOnlineMiniSplits();
+        if (onlineUnits.length === 0) {
+            return 'off';
+        }
 
-        console.log(`Mode determination: Outside ${outsideTemp}°F, Target ${averageDesired}°F, Current mode: ${currentMode}`);
+        // Calculate dynamic priority based on distance from setpoint range
+        const devicePriorities = this.calculateDevicePriorities(onlineUnits, targetMinTemp, targetMaxTemp);
+        
+        if (devicePriorities.length === 0) {
+            return state.globalMode as 'heat' | 'cool' | 'off';
+        }
 
-        // Determine new mode based on outside temperature and hysteresis
-        if (outsideTemp < (averageDesired - hysteresis)) {
-            // It's cold outside, we likely need heating
-            if (currentMode === 'cool') {
-                // Only switch if temperature difference is significant
-                return outsideTemp < (averageDesired - hysteresis - 2) ? 'heat' : 'cool';
-            }
+        // Find device with highest priority (furthest from setpoint range)
+        const highestPriorityDevice = devicePriorities[0];
+        
+        console.log(`Mode determination: Highest priority device: ${highestPriorityDevice.device.name} (${highestPriorityDevice.device.currentTemperature}°F), Distance: ${highestPriorityDevice.distanceFromRange}°F, Range: ${targetMinTemp}°F - ${targetMaxTemp}°F`);
+        
+        // Determine mode based on highest priority device's position relative to setpoint range
+        if (highestPriorityDevice.device.currentTemperature < targetMinTemp) {
+            // Device is below setpoint range → Heat mode
             return 'heat';
-        } else if (outsideTemp > (averageDesired + hysteresis)) {
-            // It's hot outside, we likely need cooling
-            if (currentMode === 'heat') {
-                // Only switch if temperature difference is significant
-                return outsideTemp > (averageDesired + hysteresis + 2) ? 'cool' : 'heat';
-            }
+        } else if (highestPriorityDevice.device.currentTemperature > targetMaxTemp) {
+            // Device is above setpoint range → Cool mode
             return 'cool';
         } else {
-            // Temperature is in the comfort zone
-            // Check indoor temperatures to decide
-            const onlineUnits = this.config.stateManager.getOnlineMiniSplits();
-            if (onlineUnits.length === 0) {
-                return 'off';
-            }
-
-            const avgCurrentTemp = this.config.stateManager.getAverageCurrentTemperature();
-            
-            if (avgCurrentTemp < targetMinTemp) {
-                return 'heat';
-            } else if (avgCurrentTemp > targetMaxTemp) {
-                return 'cool';
-            } else {
-                // Maintain current mode if in comfort range
-                return currentMode === 'off' ? 'off' : (currentMode as 'heat' | 'cool' | 'off');
-            }
+            // Device is within setpoint range → no change needed, maintain current mode
+            return state.globalMode as 'heat' | 'cool' | 'off';
         }
+    }
+
+    private calculateDevicePriorities(onlineUnits: MiniSplitState[], minTemp: number, maxTemp: number): {device: MiniSplitState, distanceFromRange: number}[] {
+        const priorities = onlineUnits.map(device => {
+            let distanceFromRange: number;
+            
+            if (device.currentTemperature < minTemp) {
+                // Device is below range
+                distanceFromRange = minTemp - device.currentTemperature;
+            } else if (device.currentTemperature > maxTemp) {
+                // Device is above range  
+                distanceFromRange = device.currentTemperature - maxTemp;
+            } else {
+                // Device is within range
+                distanceFromRange = 0;
+            }
+            
+            return {
+                device,
+                distanceFromRange
+            };
+        });
+        
+        // Sort by distance from range (descending) - furthest devices get highest priority
+        return priorities.sort((a, b) => b.distanceFromRange - a.distanceFromRange);
     }
 
     private detectConflicts(): string[] {
@@ -346,13 +353,29 @@ export class HeatPumpCoordinator {
                 }
             }
 
-            // Adjust based on room priority
-            if (unit.priority > 7) {
-                // High priority rooms get slight preference
-                if (systemMode === 'heat') {
-                    targetTemp = Math.min(maxTemp, targetTemp + 1);
-                } else if (systemMode === 'cool') {
-                    targetTemp = Math.max(minTemp, targetTemp - 1);
+            // Adjust based on dynamic priority (distance from setpoint range)
+            const activeSchedule = this.config.stateManager.getActiveSchedule();
+            const globalMinTemp = activeSchedule?.targetMinTemp || state.globalMinTemp;
+            const globalMaxTemp = activeSchedule?.targetMaxTemp || state.globalMaxTemp;
+            const devicePriorities = this.calculateDevicePriorities([unit], globalMinTemp, globalMaxTemp);
+            
+            if (devicePriorities.length > 0) {
+                const devicePriority = devicePriorities[0];
+                // Update the device's priority for tracking purposes
+                const currentState = this.config.stateManager.getMiniSplitState(unit.deviceId);
+                if (currentState) {
+                    this.config.stateManager.updateMiniSplitState(unit.deviceId, {
+                        priority: Math.min(10, Math.max(1, Math.round(devicePriority.distanceFromRange * 2) + 1))
+                    });
+                }
+                
+                // High priority devices (>3°F from range) get slight temperature preference  
+                if (devicePriority.distanceFromRange > 3) {
+                    if (systemMode === 'heat') {
+                        targetTemp = Math.min(maxTemp, targetTemp + 1);
+                    } else if (systemMode === 'cool') {
+                        targetTemp = Math.max(minTemp, targetTemp - 1);
+                    }
                 }
             }
 
@@ -409,19 +432,32 @@ export class HeatPumpCoordinator {
         parts.push(`Outside temperature: ${weather.temperature}°F`);
         
         const state = this.config.stateManager.getSystemState();
-        const avgDesired = (state.globalMinTemp + state.globalMaxTemp) / 2;
-        parts.push(`Target range: ${state.globalMinTemp}°F - ${state.globalMaxTemp}°F (avg: ${avgDesired}°F)`);
+        const activeSchedule = this.config.stateManager.getActiveSchedule();
+        const targetMinTemp = activeSchedule?.targetMinTemp || state.globalMinTemp;
+        const targetMaxTemp = activeSchedule?.targetMaxTemp || state.globalMaxTemp;
         
-        if (weather.temperature < avgDesired - 2) {
-            parts.push('Outside is cold relative to desired temperature → Heat mode selected');
-        } else if (weather.temperature > avgDesired + 2) {
-            parts.push('Outside is warm relative to desired temperature → Cool mode selected');
-        } else {
-            parts.push('Outside temperature is moderate → Mode based on indoor conditions');
+        parts.push(`Target range: ${targetMinTemp}°F - ${targetMaxTemp}°F`);
+        parts.push(`System mode selected: ${systemMode.toUpperCase()}`);
+        
+        const onlineUnits = this.config.stateManager.getOnlineMiniSplits();
+        if (onlineUnits.length > 0) {
+            const devicePriorities = this.calculateDevicePriorities(onlineUnits, targetMinTemp, targetMaxTemp);
+            if (devicePriorities.length > 0) {
+                const highestPriority = devicePriorities[0];
+                parts.push(`Priority device: ${highestPriority.device.name} at ${highestPriority.device.currentTemperature}°F (${highestPriority.distanceFromRange.toFixed(1)}°F from range)`);
+                
+                if (systemMode === 'heat') {
+                    parts.push('Mode: Device(s) below target range need heating');
+                } else if (systemMode === 'cool') {
+                    parts.push('Mode: Device(s) above target range need cooling');
+                } else {
+                    parts.push('Mode: All devices within target range or system off');
+                }
+            }
         }
 
         if (actions.length > 0) {
-            parts.push(`Applied ${actions.length} adjustments to maintain coordination`);
+            parts.push(`Applied ${actions.length} coordination adjustments`);
         } else {
             parts.push('No adjustments needed - all units already coordinated');
         }
