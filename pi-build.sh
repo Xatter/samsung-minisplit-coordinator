@@ -29,8 +29,8 @@ npm run build || {
 # Now build Docker image
 echo ""
 echo "Step 3: Building Docker image with pre-built files..."
-docker-compose build
+docker compose build
 
 echo ""
-echo "Build complete! You can now run: docker-compose up"
+echo "Build complete! You can now run: docker compose up"
 echo "The Docker container will use the locally built files."
