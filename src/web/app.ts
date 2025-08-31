@@ -66,7 +66,7 @@ export class AdminServer {
         });
 
         this.app.use('/auth', createAuthRoutes(this.oauth, this.coordinator));
-        this.app.use('/admin', createAdminRoutes(this.oauth, this.deviceManager, this.coordinator));
+        this.app.use('/admin', createAdminRoutes(this.oauth, this.deviceManager, () => this.coordinator));
         
         this.app.post('/smartapp', (req, res) => {
             this.smartapp.handleHttpCallback(req, res);
@@ -105,6 +105,7 @@ export class AdminServer {
         });
     }
 
+
     public getSmartApp(): MatterSmartApp {
         return this.smartapp;
     }
@@ -115,6 +116,7 @@ export class AdminServer {
 
     public setCoordinator(coordinator: HeatPumpCoordinator): void {
         this.coordinator = coordinator;
+        console.log('🔧 Coordinator set');
     }
 
     public setMatterCommissioning(commissioning: { qrCode?: string; manualCode?: string }): void {

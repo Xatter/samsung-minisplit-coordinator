@@ -3,7 +3,7 @@ import { SmartThingsOAuth } from '../../smartthings/oauth';
 import { SmartThingsDeviceManager } from '../../smartthings/device-manager';
 import { HeatPumpCoordinator } from '../../coordinator/heat-pump-coordinator';
 
-export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartThingsDeviceManager, coordinator?: HeatPumpCoordinator): Router {
+export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartThingsDeviceManager, getCoordinator: () => HeatPumpCoordinator | undefined): Router {
     const router = Router();
 
     const requireAuth = (req: Request, res: Response, next: any) => {
@@ -31,7 +31,7 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
             res.render('devices', {
                 title: 'SmartThings Devices',
                 currentPage: 'devices',
-                showCoordinator: !!coordinator,
+                showCoordinator: !!getCoordinator(),
                 locations,
                 devices,
                 thermostats,
@@ -42,7 +42,7 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
             res.render('error', {
                 title: 'Device Error',
                 currentPage: '',
-                showCoordinator: !!coordinator,
+                showCoordinator: !!getCoordinator(),
                 message: 'Failed to load SmartThings devices'
             });
         }
@@ -116,105 +116,137 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
     });
 
     // Coordinator routes
-    if (coordinator) {
-        router.get('/coordinator', requireAuth, async (req: Request, res: Response) => {
-            try {
-                const status = coordinator.getCoordinatorStatus();
-                const systemState = coordinator['config'].stateManager.getSystemState();
-                const preferences = coordinator['config'].stateManager.getUserPreferences();
-                const onlineUnits = coordinator['config'].stateManager.getOnlineMiniSplits();
-                const conflicts = coordinator['config'].stateManager.getUnresolvedConflicts();
-                const recentChanges = coordinator['config'].stateManager.getRecentModeChanges(24);
+    router.get('/coordinator', requireAuth, async (req: Request, res: Response) => {
+        const coordinator = getCoordinator();
+        if (!coordinator) {
+            return res.status(404).render('error', {
+                title: 'Coordinator Not Available',
+                currentPage: '',
+                showCoordinator: false,
+                message: 'The Heat Pump Coordinator is not currently available. Please check if it has been properly configured and initialized.'
+            });
+        }
+        
+        try {
+            const status = coordinator.getCoordinatorStatus();
+            const systemState = coordinator['config'].stateManager.getSystemState();
+            const preferences = coordinator['config'].stateManager.getUserPreferences();
+            const onlineUnits = coordinator['config'].stateManager.getOnlineMiniSplits();
+            const conflicts = coordinator['config'].stateManager.getUnresolvedConflicts();
+            const recentChanges = coordinator['config'].stateManager.getRecentModeChanges(24);
 
-                res.render('coordinator', {
-                    title: 'Heat Pump Coordinator',
-                    currentPage: 'coordinator',
-                    showCoordinator: true,
-                    status,
-                    systemState,
-                    preferences,
-                    onlineUnits,
-                    conflicts,
-                    recentChanges
-                });
-            } catch (error) {
-                console.error('Error loading coordinator status:', error);
-                res.render('error', {
-                    title: 'Coordinator Error',
-                    currentPage: '',
-                    showCoordinator: !!coordinator,
+            res.render('coordinator', {
+                title: 'Heat Pump Coordinator',
+                currentPage: 'coordinator',
+                showCoordinator: true,
+                status,
+                systemState,
+                preferences,
+                onlineUnits,
+                conflicts,
+                recentChanges
+            });
+        } catch (error) {
+            console.error('Error loading coordinator status:', error);
+            res.render('error', {
+                title: 'Coordinator Error',
+                currentPage: '',
+                showCoordinator: !!getCoordinator(),
                     message: 'Failed to load coordinator status'
                 });
             }
         });
 
-        router.get('/coordinator/status', requireAuth, async (req: Request, res: Response) => {
-            try {
-                const status = coordinator.getCoordinatorStatus();
-                res.json(status);
-            } catch (error) {
-                console.error('Error getting coordinator status:', error);
-                res.status(500).json({ error: 'Failed to get coordinator status' });
-            }
-        });
+    router.get('/coordinator/status', requireAuth, async (req: Request, res: Response) => {
+        const coordinator = getCoordinator();
+        if (!coordinator) {
+            return res.status(404).json({ error: 'Coordinator not available' });
+        }
+        try {
+            const status = coordinator.getCoordinatorStatus();
+            res.json(status);
+        } catch (error) {
+            console.error('Error getting coordinator status:', error);
+            res.status(500).json({ error: 'Failed to get coordinator status' });
+        }
+    });
 
-        router.post('/coordinator/mode', requireAuth, async (req: Request, res: Response) => {
-            const { mode, reason } = req.body;
-            
-            try {
-                await coordinator.setGlobalMode(mode, reason || 'manual_override');
-                res.json({ success: true });
-            } catch (error) {
-                console.error('Error setting global mode:', error);
-                res.status(500).json({ error: 'Failed to set global mode' });
-            }
-        });
+    router.post('/coordinator/mode', requireAuth, async (req: Request, res: Response) => {
+        const coordinator = getCoordinator();
+        if (!coordinator) {
+            return res.status(404).json({ error: 'Coordinator not available' });
+        }
+        const { mode, reason } = req.body;
+        
+        try {
+            await coordinator.setGlobalMode(mode, reason || 'manual_override');
+            res.json({ success: true });
+        } catch (error) {
+            console.error('Error setting global mode:', error);
+            res.status(500).json({ error: 'Failed to set global mode' });
+        }
+    });
 
-        router.post('/coordinator/temperature-range', requireAuth, async (req: Request, res: Response) => {
-            const { minTemp, maxTemp } = req.body;
-            
-            try {
-                await coordinator.setGlobalTemperatureRange(parseInt(minTemp), parseInt(maxTemp));
-                res.json({ success: true });
-            } catch (error) {
-                console.error('Error setting temperature range:', error);
-                res.status(500).json({ error: 'Failed to set temperature range' });
-            }
-        });
+    router.post('/coordinator/temperature-range', requireAuth, async (req: Request, res: Response) => {
+        const coordinator = getCoordinator();
+        if (!coordinator) {
+            return res.status(404).json({ error: 'Coordinator not available' });
+        }
+        const { minTemp, maxTemp } = req.body;
+        
+        try {
+            await coordinator.setGlobalTemperatureRange(parseInt(minTemp), parseInt(maxTemp));
+            res.json({ success: true });
+        } catch (error) {
+            console.error('Error setting temperature range:', error);
+            res.status(500).json({ error: 'Failed to set temperature range' });
+        }
+    });
 
-        router.post('/coordinator/emergency-off', requireAuth, async (req: Request, res: Response) => {
-            const { reason } = req.body;
-            
-            try {
-                await coordinator.emergencyOff(reason || 'manual_emergency_stop');
-                res.json({ success: true });
-            } catch (error) {
-                console.error('Error executing emergency off:', error);
-                res.status(500).json({ error: 'Failed to execute emergency off' });
-            }
-        });
+    router.post('/coordinator/emergency-off', requireAuth, async (req: Request, res: Response) => {
+        const coordinator = getCoordinator();
+        if (!coordinator) {
+            return res.status(404).json({ error: 'Coordinator not available' });
+        }
+        const { reason } = req.body;
+        
+        try {
+            await coordinator.emergencyOff(reason || 'manual_emergency_stop');
+            res.json({ success: true });
+        } catch (error) {
+            console.error('Error executing emergency off:', error);
+            res.status(500).json({ error: 'Failed to execute emergency off' });
+        }
+    });
 
-        router.post('/coordinator/run-cycle', requireAuth, async (req: Request, res: Response) => {
-            try {
-                const result = await coordinator.runCoordinationCycle();
-                res.json(result);
-            } catch (error) {
-                console.error('Error running coordination cycle:', error);
-                res.status(500).json({ error: 'Failed to run coordination cycle' });
-            }
-        });
+    router.post('/coordinator/run-cycle', requireAuth, async (req: Request, res: Response) => {
+        const coordinator = getCoordinator();
+        if (!coordinator) {
+            return res.status(404).json({ error: 'Coordinator not available' });
+        }
+        try {
+            const result = await coordinator.runCoordinationCycle();
+            res.json(result);
+        } catch (error) {
+            console.error('Error running coordination cycle:', error);
+            res.status(500).json({ error: 'Failed to run coordination cycle' });
+        }
+    });
 
-        // Add route to manually trigger device sync
-        router.post('/coordinator/sync-devices', requireAuth, async (req: Request, res: Response) => {
-            try {
-                await coordinator.triggerDeviceSync();
-                res.json({ success: true, message: 'Device sync completed' });
-            } catch (error) {
-                console.error('Error syncing devices:', error);
-                res.status(500).json({ error: 'Failed to sync devices' });
-            }
-        });
-    }
+    // Add route to manually trigger device sync
+    router.post('/coordinator/sync-devices', requireAuth, async (req: Request, res: Response) => {
+        const coordinator = getCoordinator();
+        if (!coordinator) {
+            return res.status(404).json({ error: 'Coordinator not available' });
+        }
+        try {
+            await coordinator.triggerDeviceSync();
+            res.json({ success: true, message: 'Device sync completed' });
+        } catch (error) {
+            console.error('Error syncing devices:', error);
+            res.status(500).json({ error: 'Failed to sync devices' });
+        }
+    });
 
     // Auth status routes (available regardless of coordinator)
     router.get('/auth/status', requireAuth, (req: Request, res: Response) => {
