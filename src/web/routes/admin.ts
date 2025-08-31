@@ -132,6 +132,7 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
             const systemState = coordinator['config'].stateManager.getSystemState();
             const preferences = coordinator['config'].stateManager.getUserPreferences();
             const onlineUnits = coordinator['config'].stateManager.getOnlineMiniSplits();
+            console.log('DEBUG: Online units temperatures:', onlineUnits.map(u => `${u.name}: ${u.currentTemperature}°F`));
             const conflicts = coordinator['config'].stateManager.getUnresolvedConflicts();
             const recentChanges = coordinator['config'].stateManager.getRecentModeChanges(24);
 
