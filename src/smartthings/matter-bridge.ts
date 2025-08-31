@@ -4,7 +4,7 @@ import { MatterSmartApp } from './smartapp';
 export interface MatterThermostatState {
     temperature: number;
     targetTemperature: number;
-    mode: 'heat' | 'cool' | 'auto' | 'off';
+    mode: 'heat' | 'cool' | 'off';
     isOnline: boolean;
 }
 
@@ -20,6 +20,7 @@ export class SmartThingsMatterBridge {
     private smartapp: MatterSmartApp;
     private deviceMappings: Map<string, DeviceMapping> = new Map();
     private thermostatStates: Map<string, MatterThermostatState> = new Map();
+    private syncTimer: NodeJS.Timeout | null = null;
     
     constructor(deviceManager: SmartThingsDeviceManager, smartapp: MatterSmartApp) {
         this.deviceManager = deviceManager;
@@ -96,7 +97,7 @@ export class SmartThingsMatterBridge {
 
             let temperature = 70; // Default
             let targetTemperature = 70; // Default
-            let mode: 'heat' | 'cool' | 'auto' | 'off' = 'off';
+            let mode: 'heat' | 'cool' | 'off' = 'off';
 
             if (mainComponent.temperatureMeasurement?.temperature) {
                 temperature = mainComponent.temperatureMeasurement.temperature.value;
@@ -198,10 +199,18 @@ export class SmartThingsMatterBridge {
     public async startPeriodicSync(intervalMs: number = 30000): Promise<void> {
         console.log(`Starting periodic sync every ${intervalMs}ms`);
         
-        setInterval(() => {
+        this.syncTimer = setInterval(() => {
             this.syncAllDevices().catch(error => {
                 console.error('Periodic sync error:', error);
             });
         }, intervalMs);
+    }
+
+    public stop(): void {
+        if (this.syncTimer) {
+            clearInterval(this.syncTimer);
+            this.syncTimer = null;
+            console.log('SmartThings Matter Bridge stopped');
+        }
     }
 }

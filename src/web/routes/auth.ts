@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { SmartThingsOAuth } from '../../smartthings/oauth';
+import { HeatPumpCoordinator } from '../../coordinator/heat-pump-coordinator';
 
-export function createAuthRoutes(oauth: SmartThingsOAuth): Router {
+export function createAuthRoutes(oauth: SmartThingsOAuth, coordinator?: HeatPumpCoordinator): Router {
     const router = Router();
 
     router.get('/login', (req: Request, res: Response) => {
@@ -10,6 +11,8 @@ export function createAuthRoutes(oauth: SmartThingsOAuth): Router {
         }
         res.render('login', { 
             title: 'SmartThings Authentication',
+            currentPage: 'login',
+            showCoordinator: !!coordinator,
             authUrl: oauth.getAuthorizationUrl()
         });
     });
@@ -20,6 +23,8 @@ export function createAuthRoutes(oauth: SmartThingsOAuth): Router {
         if (error) {
             return res.render('error', { 
                 title: 'Authentication Error',
+                currentPage: '',
+                showCoordinator: !!coordinator,
                 message: `Authentication failed: ${error}`
             });
         }
@@ -27,6 +32,8 @@ export function createAuthRoutes(oauth: SmartThingsOAuth): Router {
         if (!code || typeof code !== 'string') {
             return res.render('error', { 
                 title: 'Authentication Error',
+                currentPage: '',
+                showCoordinator: !!coordinator,
                 message: 'No authorization code received'
             });
         }
@@ -37,11 +44,25 @@ export function createAuthRoutes(oauth: SmartThingsOAuth): Router {
             req.session.tokenStore = tokens;
             oauth.setTokenStore(tokens);
             
+            // Trigger device sync if coordinator is available
+            if (coordinator) {
+                console.log('Authentication successful - triggering device sync...');
+                try {
+                    await coordinator.triggerDeviceSync();
+                    console.log('Device sync completed after authentication');
+                } catch (syncError) {
+                    console.error('Device sync failed after authentication:', syncError);
+                    // Don't fail the auth flow if sync fails
+                }
+            }
+            
             res.redirect('/admin/devices');
         } catch (error) {
             console.error('OAuth callback error:', error);
             res.render('error', { 
                 title: 'Authentication Error',
+                currentPage: '',
+                showCoordinator: !!coordinator,
                 message: 'Failed to exchange authorization code for access token'
             });
         }

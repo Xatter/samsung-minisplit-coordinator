@@ -35,16 +35,32 @@ export class SmartThingsDeviceManager {
         this.oauth = oauth;
     }
 
-    private async getClient(): Promise<SmartThingsClient> {
+    public isAuthenticated(): boolean {
+        return this.oauth.isAuthenticated();
+    }
+
+    private async getClient(): Promise<SmartThingsClient | null> {
+        if (!this.oauth.isAuthenticated()) {
+            return null;
+        }
+        
         if (!this.client) {
-            const token = await this.oauth.getValidToken();
-            this.client = new SmartThingsClient(new BearerTokenAuthenticator(token));
+            try {
+                const token = await this.oauth.getValidToken();
+                this.client = new SmartThingsClient(new BearerTokenAuthenticator(token));
+            } catch (error) {
+                console.error('Failed to get valid token:', error);
+                return null;
+            }
         }
         return this.client;
     }
 
     async getLocations() {
         const client = await this.getClient();
+        if (!client) {
+            throw new Error('SmartThings authentication required');
+        }
         try {
             return await client.locations.list();
         } catch (error) {
@@ -55,6 +71,9 @@ export class SmartThingsDeviceManager {
 
     async getDevices(locationId?: string): Promise<SmartThingsDevice[]> {
         const client = await this.getClient();
+        if (!client) {
+            throw new Error('SmartThings authentication required');
+        }
         try {
             const devices = locationId 
                 ? await client.devices.list({ locationId })
@@ -78,6 +97,9 @@ export class SmartThingsDeviceManager {
 
     async getDeviceStatus(deviceId: string): Promise<DeviceStatus> {
         const client = await this.getClient();
+        if (!client) {
+            throw new Error('SmartThings authentication required');
+        }
         try {
             const status = await client.devices.getStatus(deviceId);
             return {
@@ -92,6 +114,9 @@ export class SmartThingsDeviceManager {
 
     async executeDeviceCommand(deviceId: string, capability: string, command: string, args: any[] = []): Promise<void> {
         const client = await this.getClient();
+        if (!client) {
+            throw new Error('SmartThings authentication required');
+        }
         try {
             await client.devices.executeCommand(deviceId, {
                 capability,
@@ -108,7 +133,7 @@ export class SmartThingsDeviceManager {
     async getThermostatDevices(locationId?: string): Promise<SmartThingsDevice[]> {
         const devices = await this.getDevices(locationId);
         return devices.filter(device => 
-            device.capabilities.some(cap => cap.id === 'thermostat')
+            device.capabilities.some(cap => cap.id === 'thermostat' || cap.id === 'airConditionerMode')
         );
     }
 
@@ -119,12 +144,64 @@ export class SmartThingsDeviceManager {
         );
     }
 
-    async setThermostatTemperature(deviceId: string, temperature: number, scale: 'F' | 'C' = 'F'): Promise<void> {
-        await this.executeDeviceCommand(deviceId, 'thermostatHeatingSetpoint', 'setHeatingSetpoint', [temperature]);
+    private async getDeviceCapabilities(deviceId: string): Promise<any[]> {
+        const devices = await this.getDevices();
+        const device = devices.find(d => d.deviceId === deviceId);
+        return device?.capabilities || [];
     }
 
-    async setThermostatMode(deviceId: string, mode: 'heat' | 'cool' | 'auto' | 'off'): Promise<void> {
-        await this.executeDeviceCommand(deviceId, 'thermostat', 'setThermostatMode', [mode]);
+    private async isAirConditioner(deviceId: string): Promise<boolean> {
+        const capabilities = await this.getDeviceCapabilities(deviceId);
+        return capabilities.some(cap => cap.id === 'airConditionerMode');
+    }
+
+    async setThermostatTemperature(deviceId: string, temperature: number, scale: 'F' | 'C' = 'F'): Promise<void> {
+        const isAC = await this.isAirConditioner(deviceId);
+        
+        if (isAC) {
+            // Air conditioner devices use thermostatCoolingSetpoint
+            await this.executeDeviceCommand(deviceId, 'thermostatCoolingSetpoint', 'setCoolingSetpoint', [temperature]);
+        } else {
+            // Traditional thermostats use thermostatHeatingSetpoint
+            await this.executeDeviceCommand(deviceId, 'thermostatHeatingSetpoint', 'setHeatingSetpoint', [temperature]);
+        }
+    }
+
+    async setThermostatMode(deviceId: string, mode: 'heat' | 'cool' | 'off'): Promise<void> {
+        const isAC = await this.isAirConditioner(deviceId);
+        
+        if (isAC) {
+            // Air conditioner devices use airConditionerMode capability
+            const acMode = this.convertToAirConditionerMode(mode);
+            
+            // For air conditioners, ensure the unit is on when setting a mode (except 'off')
+            if (mode !== 'off') {
+                await this.executeDeviceCommand(deviceId, 'switch', 'on');
+                // Small delay to ensure switch command is processed
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            await this.executeDeviceCommand(deviceId, 'airConditionerMode', 'setAirConditionerMode', [acMode]);
+            
+            // Turn off the switch when mode is 'off'
+            if (mode === 'off') {
+                await this.executeDeviceCommand(deviceId, 'switch', 'off');
+            }
+        } else {
+            // Traditional thermostats use thermostat capability
+            await this.executeDeviceCommand(deviceId, 'thermostat', 'setThermostatMode', [mode]);
+        }
+    }
+
+    private convertToAirConditionerMode(mode: 'heat' | 'cool' | 'off'): string {
+        // Map thermostat modes to air conditioner modes
+        // Air conditioners support: 'cool', 'dry', 'wind', 'heat', 'off' (auto mode removed)
+        switch (mode) {
+            case 'heat': return 'heat';
+            case 'cool': return 'cool';
+            case 'off': return 'off';
+            default: return 'off';
+        }
     }
 
     async switchDevice(deviceId: string, state: 'on' | 'off'): Promise<void> {

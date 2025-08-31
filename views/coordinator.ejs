@@ -1,0 +1,425 @@
+
+<style>
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        .status-card h3 {
+            margin-top: 0;
+            color: #667eea;
+            font-size: 1.3em;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-running { background-color: #28a745; }
+        .status-stopped { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+        .temperature-range {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .mode-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .mode-heat { background-color: #ff6b6b; color: white; }
+        .mode-cool { background-color: #4ecdc4; color: white; }
+        .mode-off { background-color: #95a5a6; color: white; }
+        .units-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .unit-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .unit-card.offline {
+            opacity: 0.6;
+            background-color: #f8f9fa;
+        }
+        .unit-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .controls {
+            margin-top: 30px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background-color: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .btn:hover {
+            background-color: #5a67d8;
+        }
+        .btn-emergency {
+            background-color: #dc3545;
+        }
+        .btn-emergency:hover {
+            background-color: #c82333;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        input, select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .conflicts {
+            margin-top: 20px;
+        }
+        .conflict-item {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        .activity-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .timestamp {
+            color: #6c757d;
+            font-size: 0.8em;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+        }
+        .nav-tabs a {
+            display: inline-block;
+            padding: 10px 20px;
+            text-decoration: none;
+            background: #e9ecef;
+            color: #495057;
+            border-radius: 6px 6px 0 0;
+            margin-right: 5px;
+        }
+        .nav-tabs a.active {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+        }
+    </style>
+</style>
+
+<h1 class="page-title">
+    <span class="icon">🌡️</span>
+    <%= title %>
+</h1>
+
+<p style="font-size: 1.1em; color: #666; margin-bottom: 30px;">
+    Coordinating <%= onlineUnits.length %> of <%= status.totalUnits %> mini-split units
+</p>
+
+    <div class="status-grid">
+        <div class="status-card">
+            <h3>🔧 Coordinator Status</h3>
+            <div>
+                <span class="status-indicator <%= status.isRunning ? 'status-running' : 'status-stopped' %>"></span>
+                <%= status.isRunning ? 'Active' : 'Stopped' %>
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>SmartThings Auth:</strong>
+                <span class="status-indicator <%= status.isAuthenticated ? 'status-running' : 'status-stopped' %>"></span>
+                <%= status.isAuthenticated ? 'Connected' : 'Not Connected' %>
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>System Mode:</strong> 
+                <span class="mode-badge mode-<%= status.globalMode %>"><%= status.globalMode %></span>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h3>🌡️ Temperature Control</h3>
+            <div class="temperature-range">
+                <%= status.globalRange.min %>°F - <%= status.globalRange.max %>°F
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>Outside:</strong> <%= status.outsideTemperature %>°F
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h3>📊 System Health</h3>
+            <div><strong>Online Units:</strong> <%= status.onlineUnits %>/<%= status.totalUnits %></div>
+            <div><strong>Conflicts:</strong> 
+                <span class="status-indicator <%= status.unresolvedConflicts > 0 ? 'status-warning' : 'status-running' %>"></span>
+                <%= status.unresolvedConflicts %>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h3>🌤️ Weather Service</h3>
+            <div>
+                <span class="status-indicator <%= status.weatherCacheValid ? 'status-running' : 'status-warning' %>"></span>
+                <%= status.weatherCacheValid ? 'Current' : 'Stale' %>
+            </div>
+            <div style="margin-top: 5px; font-size: 0.9em; color: #666;">
+                Last Updated: <%= status.lastWeatherUpdate.toLocaleString() %>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <h3>🎛️ Manual Controls</h3>
+        
+        <div class="control-group">
+            <label>Global Mode Override</label>
+            <div class="control-row">
+                <select id="globalMode">
+                    <option value="heat" <%= status.globalMode === 'heat' ? 'selected' : '' %>>Heat</option>
+                    <option value="cool" <%= status.globalMode === 'cool' ? 'selected' : '' %>>Cool</option>
+                    <option value="off" <%= status.globalMode === 'off' ? 'selected' : '' %>>Off</option>
+                </select>
+                <button class="btn" onclick="setGlobalMode()">Apply Mode</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Temperature Range</label>
+            <div class="control-row">
+                <input type="number" id="minTemp" value="<%= status.globalRange.min %>" min="50" max="85" placeholder="Min °F">
+                <span>to</span>
+                <input type="number" id="maxTemp" value="<%= status.globalRange.max %>" min="55" max="90" placeholder="Max °F">
+                <button class="btn" onclick="setTemperatureRange()">Update Range</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Actions</label>
+            <div class="control-row">
+                <button class="btn btn-success" onclick="runCoordinationCycle()">Run Coordination Cycle</button>
+                <button class="btn btn-emergency" onclick="emergencyOff()">Emergency Off All Units</button>
+            </div>
+        </div>
+    </div>
+
+    <% if (onlineUnits.length > 0) { %>
+    <div class="status-card">
+        <h3>🏠 Mini-Split Units</h3>
+        <div class="units-grid">
+            <% onlineUnits.forEach(unit => { %>
+            <div class="unit-card <%= !unit.isOnline ? 'offline' : '' %>">
+                <div class="unit-name"><%= unit.name %></div>
+                <div><strong>Room:</strong> <%= unit.room %></div>
+                <div><strong>Current:</strong> <%= unit.currentTemperature %>°F</div>
+                <div><strong>Target:</strong> <%= unit.targetTemperature %>°F</div>
+                <div><strong>Mode:</strong> <span class="mode-badge mode-<%= unit.mode %>"><%= unit.mode %></span></div>
+                <div><strong>Priority:</strong> <%= unit.priority %>/10</div>
+                <div><strong>Status:</strong> <%= unit.isOnline ? '🟢 Online' : '🔴 Offline' %></div>
+                <div style="font-size: 0.8em; color: #666;">
+                    Updated: <%= new Date(unit.lastUpdated).toLocaleString() %>
+                </div>
+            </div>
+            <% }); %>
+        </div>
+    </div>
+    <% } %>
+
+    <% if (conflicts.length > 0) { %>
+    <div class="status-card">
+        <h3>⚠️ Active Conflicts</h3>
+        <div class="conflicts">
+            <% conflicts.forEach(conflict => { %>
+            <div class="conflict-item">
+                <strong><%= conflict.conflictType.replace('_', ' ').toUpperCase() %>:</strong>
+                <%= conflict.description %>
+                <div class="timestamp">
+                    <%= new Date(conflict.timestamp).toLocaleString() %>
+                </div>
+            </div>
+            <% }); %>
+        </div>
+    </div>
+    <% } %>
+
+    <% if (recentChanges.length > 0) { %>
+    <div class="status-card">
+        <h3>📋 Recent Activity</h3>
+        <div class="activity-log">
+            <% recentChanges.slice(0, 20).forEach(change => { %>
+            <div class="log-entry">
+                <div class="timestamp"><%= new Date(change.timestamp).toLocaleString() %></div>
+                <div>
+                    <%= change.deviceId ? `Device ${change.deviceId}` : 'System' %>: 
+                    <%= change.previousMode %> → <%= change.newMode %>
+                    (<%= change.reason.replace('_', ' ') %>)
+                    <% if (change.outsideTemp) { %>- Outside: <%= change.outsideTemp %>°F<% } %>
+                </div>
+            </div>
+            <% }); %>
+        </div>
+    </div>
+    <% } %>
+
+    <script>
+        async function setGlobalMode() {
+            const mode = document.getElementById('globalMode').value;
+            try {
+                const response = await fetch('/admin/coordinator/mode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode, reason: 'manual_override' })
+                });
+                
+                if (response.ok) {
+                    alert('Mode updated successfully');
+                    location.reload();
+                } else {
+                    alert('Failed to update mode');
+                }
+            } catch (error) {
+                alert('Error updating mode: ' + error.message);
+            }
+        }
+
+        async function setTemperatureRange() {
+            const minTemp = parseInt(document.getElementById('minTemp').value);
+            const maxTemp = parseInt(document.getElementById('maxTemp').value);
+            
+            if (minTemp >= maxTemp) {
+                alert('Minimum temperature must be less than maximum temperature');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/coordinator/temperature-range', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ minTemp, maxTemp })
+                });
+                
+                if (response.ok) {
+                    alert('Temperature range updated successfully');
+                    location.reload();
+                } else {
+                    alert('Failed to update temperature range');
+                }
+            } catch (error) {
+                alert('Error updating temperature range: ' + error.message);
+            }
+        }
+
+        async function runCoordinationCycle() {
+            if (!confirm('Run a coordination cycle now? This will check all units and apply any needed changes.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/coordinator/run-cycle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    alert(`Coordination cycle completed!\n\nActions taken: ${result.actions.length}\nConflicts found: ${result.conflicts.length}\nSystem mode: ${result.systemMode}\n\n${result.reasoning}`);
+                    location.reload();
+                } else {
+                    alert('Failed to run coordination cycle: ' + result.error);
+                }
+            } catch (error) {
+                alert('Error running coordination cycle: ' + error.message);
+            }
+        }
+
+        async function emergencyOff() {
+            if (!confirm('EMERGENCY OFF - This will immediately turn off ALL mini-split units. Continue?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/coordinator/emergency-off', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason: 'manual_emergency_stop' })
+                });
+                
+                if (response.ok) {
+                    alert('Emergency off executed - all units stopped');
+                    location.reload();
+                } else {
+                    alert('Failed to execute emergency off');
+                }
+            } catch (error) {
+                alert('Error executing emergency off: ' + error.message);
+            }
+        }
+
+        // Auto-refresh status every 30 seconds
+        setInterval(async () => {
+            try {
+                const response = await fetch('/admin/coordinator/status');
+                if (response.ok) {
+                    // Could update specific elements without full reload
+                    // For now, we'll just indicate fresh data is available
+                    console.log('Status updated');
+                }
+            } catch (error) {
+                console.log('Status refresh failed:', error);
+            }
+        }, 30000);
+    </script>

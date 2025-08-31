@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { config } from '../config';
+import { TokenStorage, TokenStore } from './token-storage';
 
 export interface TokenResponse {
     access_token: string;
@@ -9,23 +10,45 @@ export interface TokenResponse {
     scope: string;
 }
 
-export interface TokenStore {
-    accessToken: string;
-    refreshToken: string;
-    expiresAt: number;
-    scope: string;
-}
+export { TokenStore } from './token-storage';
 
 export class SmartThingsOAuth {
     private readonly clientId: string;
     private readonly clientSecret: string;
     private readonly redirectUri: string;
     private tokenStore: TokenStore | null = null;
+    private readonly tokenStorage: TokenStorage;
 
-    constructor() {
+    constructor(dataDir: string = './data') {
         this.clientId = config.smartthings.clientId;
         this.clientSecret = config.smartthings.clientSecret;
         this.redirectUri = config.urls.callback;
+        this.tokenStorage = new TokenStorage(dataDir, config.server.sessionSecret);
+        
+        // Load stored tokens on initialization
+        this.loadStoredTokens();
+    }
+
+    private loadStoredTokens(): void {
+        try {
+            const storedTokens = this.tokenStorage.loadTokens();
+            if (storedTokens) {
+                this.tokenStore = storedTokens;
+                console.log('SmartThings authentication loaded from storage');
+            }
+        } catch (error) {
+            console.error('Failed to load stored tokens:', error);
+        }
+    }
+
+    private saveTokensToStorage(): void {
+        if (this.tokenStore) {
+            try {
+                this.tokenStorage.saveTokens(this.tokenStore);
+            } catch (error) {
+                console.error('Failed to save tokens to storage:', error);
+            }
+        }
     }
 
     getAuthorizationUrl(): string {
@@ -61,6 +84,9 @@ export class SmartThingsOAuth {
                 scope: tokenData.scope,
             };
 
+            // Save tokens to persistent storage
+            this.saveTokensToStorage();
+
             return this.tokenStore;
         } catch (error) {
             console.error('Error exchanging code for token:', error);
@@ -92,6 +118,9 @@ export class SmartThingsOAuth {
                 scope: tokenData.scope,
             };
 
+            // Save refreshed tokens to persistent storage
+            this.saveTokensToStorage();
+
             return this.tokenStore;
         } catch (error) {
             console.error('Error refreshing token:', error);
@@ -117,10 +146,29 @@ export class SmartThingsOAuth {
 
     setTokenStore(tokenStore: TokenStore): void {
         this.tokenStore = tokenStore;
+        // Save when manually setting tokens (for session restore)
+        this.saveTokensToStorage();
     }
 
     getTokenStore(): TokenStore | null {
         return this.tokenStore;
+    }
+
+    hasStoredTokens(): boolean {
+        return this.tokenStorage.hasStoredTokens();
+    }
+
+    clearStoredTokens(): void {
+        this.tokenStorage.deleteTokens();
+        this.tokenStore = null;
+        console.log('SmartThings authentication cleared');
+    }
+
+    getStorageInfo(): { hasTokens: boolean; age: number } {
+        return {
+            hasTokens: this.tokenStorage.hasStoredTokens(),
+            age: this.tokenStorage.getTokenAge()
+        };
     }
 
     private generateState(): string {

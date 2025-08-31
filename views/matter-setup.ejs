@@ -1,0 +1,255 @@
+
+<style>
+        .setup-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin: 40px 0;
+        }
+        @media (max-width: 768px) {
+            .setup-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .setup-card {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        .setup-card h3 {
+            color: #667eea;
+            margin-top: 0;
+            font-size: 1.5em;
+        }
+        .qr-code {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+        }
+        .manual-code {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin: 20px 0;
+            word-break: break-all;
+        }
+        .instructions {
+            background: #f0f8ff;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border-left: 4px solid #667eea;
+        }
+        .instructions h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .step {
+            margin: 15px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .step-number {
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .status {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ffeaa7;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .status.commissioned {
+            background: #d1edff;
+            border-color: #b3d9ff;
+            color: #0066cc;
+        }
+        .nav-tabs {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .nav-tabs a {
+            display: inline-block;
+            padding: 10px 20px;
+            text-decoration: none;
+            background: #e9ecef;
+            color: #495057;
+            border-radius: 6px;
+            margin: 0 5px;
+            transition: all 0.2s;
+        }
+        .nav-tabs a:hover {
+            background: #667eea;
+            color: white;
+        }
+        .device-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .device-info h4 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .copy-btn:hover {
+            background: #5a67d8;
+        }
+    </style>
+</style>
+
+<h1 class="page-title">
+    <span class="icon">⚙️</span>
+    <%= title %>
+</h1>
+
+<p style="font-size: 1.1em; color: #666; margin-bottom: 30px; text-align: center;">
+    Add your coordinated heat pump system to HomeKit
+</p>
+
+        <% if (commissioning.qrCode || commissioning.manualCode) { %>
+            <div class="setup-grid">
+                <div class="setup-card">
+                    <h3>📱 Scan QR Code</h3>
+                    <p>Open the Home app on your iPhone/iPad and scan this QR code:</p>
+                    <% if (commissioning.qrCode) { %>
+                        <div class="qr-code"><%= commissioning.qrCode %></div>
+                    <% } else { %>
+                        <div class="status">QR Code not available - device may already be commissioned</div>
+                    <% } %>
+                </div>
+
+                <div class="setup-card">
+                    <h3>🔢 Manual Entry</h3>
+                    <p>Or enter this setup code manually in the Home app:</p>
+                    <% if (commissioning.manualCode) { %>
+                        <div class="manual-code">
+                            <%= commissioning.manualCode %>
+                            <button class="copy-btn" onclick="copyToClipboard('<%= commissioning.manualCode %>')">Copy</button>
+                        </div>
+                    <% } else { %>
+                        <div class="status">Manual code not available - device may already be commissioned</div>
+                    <% } %>
+                </div>
+            </div>
+        <% } else { %>
+            <div class="status commissioned">
+                <h3>✅ Device Already Commissioned</h3>
+                <p>Your Matter device appears to be already added to HomeKit. If you need to recommission it, you may need to reset the device first.</p>
+            </div>
+        <% } %>
+
+        <div class="device-info">
+            <h4>🌡️ Device Information</h4>
+            <p><strong>Device Type:</strong> Coordinated Heat Pump Thermostat</p>
+            <p><strong>Features:</strong></p>
+            <ul>
+                <li>Temperature range control (heating setpoint = min temp, cooling setpoint = max temp)</li>
+                <li>Automatic mode selection based on outside temperature</li>
+                <li>Coordinates up to 4 mini-split units</li>
+                <li>Weather-based intelligent control</li>
+            </ul>
+            <p><strong>Matter Port:</strong> 5540</p>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Setup Instructions</h3>
+            <div class="step">
+                <div class="step-number">1</div>
+                <div>
+                    <strong>Open the Home app</strong> on your iPhone, iPad, or Mac
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div>
+                    <strong>Tap the "+" button</strong> in the top right corner
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div>
+                    <strong>Select "Add or Scan Accessory"</strong>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div>
+                    <strong>Scan the QR code above</strong> or tap "More Options" and enter the manual code
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">5</div>
+                <div>
+                    <strong>Follow the setup prompts</strong> in the Home app to complete the setup
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">6</div>
+                <div>
+                    <strong>Configure your temperature preferences</strong> using the heating and cooling setpoints to set your desired temperature range (e.g., 68-72°F)
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>🎛️ How Temperature Range Control Works</h3>
+            <p>This device exposes your heat pump system as a single coordinated thermostat with range control:</p>
+            <ul>
+                <li><strong>Heating Setpoint</strong> = Minimum desired temperature (e.g., 68°F)</li>
+                <li><strong>Cooling Setpoint</strong> = Maximum desired temperature (e.g., 72°F)</li>
+                <li><strong>System Mode</strong> = Automatically determined based on outside temperature and your settings</li>
+            </ul>
+            <p>The system will coordinate all your mini-split units to maintain temperatures within this range while preventing conflicting heating/cooling modes.</p>
+        </div>
+
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Setup code copied to clipboard!');
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Setup code copied to clipboard!');
+            });
+        }
+    </script>

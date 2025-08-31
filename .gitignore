@@ -58,3 +58,6 @@ matter-storage/
 # Temporary files
 tmp/
 temp/
+
+# Application data (contains sensitive tokens)
+data/

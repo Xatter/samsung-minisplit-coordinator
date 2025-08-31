@@ -21,9 +21,9 @@ This is a Matter.js-based IoT server that exposes two thermostat devices through
 ### Thermostat Configuration
 
 Both thermostats are configured with:
-- `controlSequenceOfOperation: 4` (heating + cooling + auto mode)
+- `controlSequenceOfOperation: 4` (heating + cooling mode)
 - `minSetpointDeadBand: 25` (2.5°C minimum temperature differential)
-- Support for Heating, Cooling, and AutoMode behaviors
+- Support for Heating and Cooling behaviors (auto mode disabled)
 
 ### Matter Device Structure
 

@@ -3,10 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title || 'Matter SmartThings Bridge' %></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <title><%= title || 'SmartThings Matter Bridge' %></title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .app-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            min-height: 70px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .app-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.4em;
+            font-weight: 600;
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .app-logo:hover {
+            color: #764ba2;
+            text-decoration: none;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 5px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            flex-wrap: wrap;
+        }
+        
+        .nav-tab {
+            position: relative;
+        }
+        
+        .nav-tab a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            text-decoration: none;
+            color: #666;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .nav-tab a:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .nav-tab.active a {
+            background: #667eea;
+            color: white;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .auth-status {
+            font-size: 0.9em;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .auth-status.authenticated {
+            color: #28a745;
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+            min-height: calc(100vh - 70px);
+        }
+        
+        .content-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        .page-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 30px 0;
+            font-size: 2.2em;
+            color: #667eea;
+        }
+        
+        /* Device card styles */
         .device-card {
             transition: all 0.3s ease;
             border: 1px solid #dee2e6;
@@ -19,37 +162,116 @@
         .status-offline { color: #dc3545; }
         .temperature-display { font-size: 2rem; font-weight: bold; }
         .capability-badge { font-size: 0.75rem; }
+        
+        /* Icons */
+        .icon {
+            font-size: 1.2em;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .header-container {
+                padding: 15px;
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .nav-tabs {
+                justify-content: center;
+            }
+            
+            .nav-tab a {
+                padding: 10px 15px;
+                font-size: 0.9em;
+            }
+            
+            .main-container {
+                padding: 20px 15px;
+            }
+            
+            .content-card {
+                padding: 25px;
+            }
+            
+            .page-title {
+                font-size: 1.8em;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .nav-tab a {
+                padding: 8px 12px;
+                font-size: 0.85em;
+            }
+            
+            .nav-tab a .nav-text {
+                display: none;
+            }
+            
+            .header-actions {
+                gap: 10px;
+            }
+        }
     </style>
+    <%- include('partials/page-styles') %>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="bi bi-house-gear"></i>
-                Matter SmartThings Bridge
+    <header class="app-header">
+        <div class="header-container">
+            <a href="/admin/devices" class="app-logo">
+                <span class="icon">🏠</span>
+                <span>SmartThings Bridge</span>
             </a>
-            <div class="navbar-nav ms-auto">
-                <% if (typeof session !== 'undefined' && session.tokenStore) { %>
-                    <a class="nav-link" href="/admin/devices">Devices</a>
-                    <form class="d-inline" method="post" action="/auth/logout">
-                        <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-                    </form>
-                <% } %>
+            
+            <nav>
+                <ul class="nav-tabs">
+                    <li class="nav-tab <%= (typeof currentPage !== 'undefined' && currentPage === 'devices') ? 'active' : '' %>">
+                        <a href="/admin/devices">
+                            <span class="icon">📱</span>
+                            <span class="nav-text">Devices</span>
+                        </a>
+                    </li>
+                    <% if (typeof showCoordinator !== 'undefined' && showCoordinator) { %>
+                    <li class="nav-tab <%= (typeof currentPage !== 'undefined' && currentPage === 'coordinator') ? 'active' : '' %>">
+                        <a href="/admin/coordinator">
+                            <span class="icon">🌡️</span>
+                            <span class="nav-text">Heat Pump</span>
+                        </a>
+                    </li>
+                    <% } %>
+                    <li class="nav-tab <%= (typeof currentPage !== 'undefined' && currentPage === 'matter') ? 'active' : '' %>">
+                        <a href="/matter/setup">
+                            <span class="icon">⚙️</span>
+                            <span class="nav-text">Matter Setup</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="header-actions">
+                <div class="auth-status authenticated">
+                    <span class="icon">✅</span>
+                    <span>Connected</span>
+                </div>
+                <form action="/auth/logout" method="post" style="margin: 0;">
+                    <button type="submit" class="logout-btn">
+                        🚪 Logout
+                    </button>
+                </form>
             </div>
         </div>
-    </nav>
-
-    <main class="container mt-4">
-        <%- body %>
-    </main>
-
-    <footer class="mt-5 py-4 bg-light text-center">
-        <div class="container">
-            <small class="text-muted">Matter SmartThings Bridge Admin Interface</small>
+    </header>
+    
+    <main class="main-container">
+        <div class="content-card">
+            <%- body %>
         </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <%- script || '' %>
+    </main>
+    
+    <%- include('partials/page-scripts') %>
+    <script>
+        // Add page-specific scripts here
+        <%- script || '' %>
+    </script>
 </body>
 </html>
