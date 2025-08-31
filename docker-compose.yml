@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  matter-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: matter-server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"    # Admin web interface
+      - "5540:5540"    # Matter protocol
+    volumes:
+      # Mount data directory for persistent storage
+      - ./data:/app/data
+      # Mount .env file for configuration
+      - ./.env:/app/.env:ro
+    environment:
+      # Override data directory path to use mounted volume
+      - DATA_DIR=/app/data
+      # Ensure encryption key is available for token storage
+      - SESSION_SECRET=${SESSION_SECRET:-default-secret-change-in-production}
+    networks:
+      - matter-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  matter-network:
+    driver: bridge
+
+# Optional: If you want to use named volumes instead of bind mounts
+# volumes:
+#   matter-data:
+#     driver: local
+#   matter-config:
+#     driver: local

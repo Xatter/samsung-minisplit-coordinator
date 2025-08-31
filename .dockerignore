@@ -1,0 +1,89 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs (will be created in container)
+dist/
+build/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+server.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Environment variables (will be mounted separately)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Matter.js specific
+matter-storage/
+.matter/
+*.matterignore
+
+# Temporary files
+tmp/
+temp/
+
+# Application data (will be mounted as volume)
+data/
+
+# Docker files themselves
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+
+# Screenshots and images
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Test files
+test/
+tests/
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
