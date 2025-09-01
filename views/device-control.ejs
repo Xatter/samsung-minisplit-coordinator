@@ -723,7 +723,7 @@ function initializePage() {
     // Use initial status if available, otherwise fetch it
     <% if (typeof status !== 'undefined' && status) { %>
         console.log('Using initial device status from server');
-        updateDeviceDisplay(<%= JSON.stringify(status) %>);
+        updateDeviceDisplay(<%- JSON.stringify(status) %>);
     <% } else { %>
         console.log('No initial status available, fetching from server');
     <% } %>
