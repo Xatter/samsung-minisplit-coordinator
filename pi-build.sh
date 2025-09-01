@@ -11,25 +11,41 @@ if ! command -v npm &> /dev/null; then
     exit 1
 fi
 
-# Install dependencies locally
-echo "Step 1: Installing dependencies locally..."
+# Build backend
+echo "Step 1: Installing backend dependencies locally..."
 npm install --no-audit --verbose || {
     echo "Error: npm install failed. Trying with --force..."
     npm install --no-audit --force --verbose
 }
 
-# Build TypeScript
 echo ""
-echo "Step 2: Building TypeScript..."
+echo "Step 2: Building backend TypeScript..."
 npm run build || {
-    echo "Error: Build failed"
+    echo "Error: Backend build failed"
     exit 1
 }
 
+# Build frontend
+echo ""
+echo "Step 3: Installing frontend dependencies..."
+cd frontend
+npm install --no-audit --verbose || {
+    echo "Error: Frontend npm install failed. Trying with --force..."
+    npm install --no-audit --force --verbose
+}
+
+echo ""
+echo "Step 4: Building React frontend..."
+npm run build || {
+    echo "Error: Frontend build failed"
+    exit 1
+}
+cd ..
+
 # Now build Docker image
 echo ""
-echo "Step 3: Building Docker image with pre-built files..."
-docker compose build
+echo "Step 5: Building Docker image with pre-built files..."
+docker build -f Dockerfile.pi -t samsung-minisplit-coordinator .
 
 echo ""
 echo "Build complete! You can now run: docker compose up"
