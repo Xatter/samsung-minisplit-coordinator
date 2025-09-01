@@ -630,6 +630,15 @@ let autoRefreshInterval = null;
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
+    // Use initial status if available, otherwise fetch it
+    <% if (typeof status !== 'undefined' && status) { %>
+        console.log('Using initial device status from server');
+        updateDeviceDisplay(<%= JSON.stringify(status) %>);
+    <% } else { %>
+        console.log('No initial status available, fetching from server');
+    <% } %>
+    
+    // Always fetch fresh status to ensure we have the latest
     refreshDeviceStatus();
     setupAutoRefresh();
 });
