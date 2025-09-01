@@ -1,0 +1,355 @@
+/* MatterSetup Component Styles */
+.matter-setup-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.matter-setup-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.matter-setup-header h1 {
+  color: #667eea;
+  font-size: 2.2em;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.matter-setup-header p {
+  font-size: 1.1em;
+  color: #666;
+  margin: 0;
+}
+
+.loading-state, .error-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.loading-state h1, .error-state h1 {
+  color: #667eea;
+  font-size: 1.5em;
+  margin-bottom: 20px;
+}
+
+.loading-state .spinner {
+  width: 40px;
+  height: 40px;
+  margin: 20px auto;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.setup-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.status-card, .commissioning-card, .instructions-card, .reset-card {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border-left: 4px solid #667eea;
+}
+
+.status-card h3, .commissioning-card h3, .instructions-card h3, .reset-card h3 {
+  margin-top: 0;
+  color: #667eea;
+  font-size: 1.3em;
+  margin-bottom: 15px;
+}
+
+.status-item {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-running { background-color: #28a745; }
+.status-stopped { background-color: #dc3545; }
+.status-warning { background-color: #ffc107; }
+
+.status-description {
+  color: #666;
+  font-size: 0.95em;
+  margin-left: 20px;
+  margin-bottom: 20px;
+}
+
+.commissioned-details h4 {
+  color: #667eea;
+  margin: 20px 0 10px 0;
+  font-size: 1.1em;
+}
+
+.controllers-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.controller-badge {
+  background-color: #667eea;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.connection-info p {
+  margin: 5px 0;
+  color: #666;
+  font-size: 0.95em;
+}
+
+.qr-code-section, .manual-code-section {
+  margin-bottom: 25px;
+}
+
+.qr-code-display, .manual-code-display {
+  background-color: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 15px 0;
+  text-align: center;
+}
+
+.qr-code-display code, .manual-code-display code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #333;
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  word-break: break-all;
+}
+
+.qr-code-section p, .manual-code-section p {
+  text-align: center;
+  color: #666;
+  font-size: 0.95em;
+  margin: 10px 0;
+}
+
+.manual-code-section h4 {
+  color: #667eea;
+  margin: 20px 0 10px 0;
+  font-size: 1.1em;
+}
+
+.device-info {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.device-info h4 {
+  color: #667eea;
+  margin: 0 0 15px 0;
+  font-size: 1.1em;
+}
+
+.device-details p {
+  margin: 8px 0;
+  color: #555;
+  font-size: 0.95em;
+}
+
+.setup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+}
+
+.step-number {
+  background-color: #667eea;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9em;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.step-content h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 1em;
+}
+
+.step-content p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95em;
+  line-height: 1.4;
+}
+
+.reset-card {
+  border-left-color: #dc3545;
+}
+
+.reset-card h3 {
+  color: #dc3545;
+}
+
+.btn {
+  background-color: #667eea;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  margin-top: 15px;
+}
+
+.btn:hover:not(:disabled) {
+  background-color: #5a67d8;
+}
+
+.btn-emergency {
+  background-color: #dc3545;
+}
+
+.btn-emergency:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.success-message {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Responsive design */
+@media (min-width: 768px) {
+  .setup-content {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .status-card {
+    grid-column: 1 / -1;
+  }
+
+  .instructions-card {
+    grid-column: 1 / -1;
+  }
+
+  .reset-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .matter-setup-container {
+    padding: 15px;
+  }
+
+  .matter-setup-header h1 {
+    font-size: 1.8em;
+  }
+
+  .status-card, .commissioning-card, .instructions-card, .reset-card {
+    padding: 20px;
+  }
+
+  .setup-content {
+    gap: 15px;
+  }
+
+  .step {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .step-number {
+    align-self: flex-start;
+  }
+
+  .controllers-list {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .qr-code-display code, .manual-code-display code {
+    font-size: 1em;
+    word-break: break-all;
+  }
+}
+
+@media (max-width: 480px) {
+  .matter-setup-header h1 {
+    font-size: 1.5em;
+  }
+
+  .status-card h3, .commissioning-card h3, .instructions-card h3, .reset-card h3 {
+    font-size: 1.1em;
+  }
+
+  .qr-code-display code, .manual-code-display code {
+    font-size: 0.9em;
+  }
+}
