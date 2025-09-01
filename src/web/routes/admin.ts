@@ -21,12 +21,27 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
         try {
             const locations = await deviceManager.getLocations();
             const devices = await deviceManager.getDevices();
+            
+            // Debug logging to see what we're working with
+            console.log(`Found ${devices.length} total devices:`);
+            devices.forEach(device => {
+                console.log(`Device: ${device.label || device.name} (${device.deviceId})`);
+                console.log(`  Capabilities: ${device.capabilities.map(cap => cap.id).join(', ')}`);
+            });
+            
             const thermostats = devices.filter(device => 
-                device.capabilities.some(cap => cap.id === 'thermostat')
+                device.capabilities.some(cap => 
+                    cap.id === 'thermostat' || 
+                    cap.id === 'airConditionerMode' || 
+                    cap.id === 'thermostatCoolingSetpoint' ||
+                    cap.id === 'thermostatHeatingSetpoint'
+                )
             );
             const switches = devices.filter(device => 
                 device.capabilities.some(cap => cap.id === 'switch')
             );
+            
+            console.log(`Filtered: ${thermostats.length} thermostats, ${switches.length} switches`);
 
             res.render('devices', {
                 title: 'SmartThings Devices',
@@ -279,9 +294,14 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
                 });
             }
 
-            // Check if device has thermostat capability
-            const hasThermostateCapability = device.capabilities.some(cap => cap.id === 'thermostat');
-            if (!hasThermostateCapability) {
+            // Check if device has thermostat-like capability
+            const hasThermostatCapability = device.capabilities.some(cap => 
+                cap.id === 'thermostat' || 
+                cap.id === 'airConditionerMode' || 
+                cap.id === 'thermostatCoolingSetpoint' ||
+                cap.id === 'thermostatHeatingSetpoint'
+            );
+            if (!hasThermostatCapability) {
                 return res.status(400).render('error', {
                     title: 'Device Not Supported',
                     currentPage: '',
