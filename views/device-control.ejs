@@ -719,7 +719,7 @@ function updateDeviceDisplay(status) {
 }
 
 // Initialize page
-document.addEventListener('DOMContentLoaded', () => {
+function initializePage() {
     // Use initial status if available, otherwise fetch it
     <% if (typeof status !== 'undefined' && status) { %>
         console.log('Using initial device status from server');
@@ -731,7 +731,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Always fetch fresh status to ensure we have the latest
     refreshDeviceStatus();
     setupAutoRefresh();
-});
+}
+
+// Check if DOM is already loaded, otherwise wait for it
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePage);
+} else {
+    // DOM is already loaded, run immediately
+    initializePage();
+}
 
 // Auto-refresh functionality
 function setupAutoRefresh() {
