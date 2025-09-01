@@ -1,577 +1,183 @@
-<style>
-    /* Enhanced device styling inspired by Trading Platform */
-    .device-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-        gap: 24px;
-        margin-top: 24px;
-    }
-    
-    .device-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 0;
-        overflow: hidden;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-    }
-    
-    .device-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        border-color: #667eea;
-    }
-    
-    .device-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px 24px;
-        color: white;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .device-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
-        transform: translateX(-100%);
-        transition: transform 0.6s;
-    }
-    
-    .device-card:hover .device-header::before {
-        transform: translateX(100%);
-    }
-    
-    .device-header-content {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 16px;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .device-info {
-        flex: 1;
-    }
-    
-    .device-name {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: white;
-        margin: 0 0 4px 0;
-        line-height: 1.2;
-    }
-    
-    .device-type {
-        font-size: 0.875rem;
-        color: rgba(255, 255, 255, 0.8);
-        font-weight: 500;
-    }
-    
-    .status-indicator {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.875rem;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: 600;
-        backdrop-filter: blur(10px);
-        white-space: nowrap;
-    }
-    
-    .status-online {
-        background: rgba(34, 197, 94, 0.9);
-        color: white;
-        border: 1px solid rgba(34, 197, 94, 0.3);
-    }
-    
-    .status-offline {
-        background: rgba(239, 68, 68, 0.9);
-        color: white;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-    
-    .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: currentColor;
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    
-    .device-body {
-        padding: 24px;
-    }
-    
-    .temperature-section {
-        text-align: center;
-        margin-bottom: 24px;
-        padding: 20px;
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-    }
-    
-    .temperature-display {
-        font-size: 3rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin: 8px 0;
-        line-height: 1;
-    }
-    
-    .temperature-label {
-        font-size: 0.875rem;
-        color: #64748b;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-    
-    .controls-grid {
-        display: grid;
-        gap: 16px;
-        margin-bottom: 20px;
-    }
-    
-    .control-group {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .control-label {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #374151;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-    
-    .control-input-group {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .control-input {
-        flex: 1;
-        padding: 12px 16px;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        color: #374151;
-        background: white;
-        transition: all 0.2s;
-    }
-    
-    .control-input:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-    
-    .control-btn {
-        padding: 12px 20px;
-        border: 2px solid #667eea;
-        background: white;
-        color: #667eea;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.875rem;
-        font-weight: 600;
-        transition: all 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-    
-    .control-btn:hover {
-        background: #667eea;
-        color: white;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-    
-    .control-btn.active {
-        background: #667eea;
-        color: white;
-    }
-    
-    .switch-toggle {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px;
-        background: #f8fafc;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-    }
-    
-    .switch-label {
-        font-weight: 600;
-        color: #374151;
-    }
-    
-    .capability-badges {
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid #e5e7eb;
-    }
-    
-    .capability-badge {
-        display: inline-block;
-        background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
-        color: #64748b;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        margin: 2px 4px 2px 0;
-        border: 1px solid #e2e8f0;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-    }
-    
-    .device-meta {
-        margin-top: 16px;
-        padding: 12px;
-        background: #f8fafc;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-    }
-    
-    .device-meta-text {
-        font-size: 0.75rem;
-        color: #64748b;
-        font-family: 'Monaco', 'Menlo', monospace;
-        line-height: 1.4;
-    }
-    
-    .refresh-btn {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.875rem;
-        font-weight: 600;
-        transition: all 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25);
-    }
-    
-    .refresh-btn:hover {
-        background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 8px 15px rgba(16, 185, 129, 0.4);
-    }
-    
-    .section-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 2px solid #e5e7eb;
-    }
-    
-    .device-count {
-        font-size: 0.875rem;
-        color: #64748b;
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-weight: 600;
-        border: 1px solid #e2e8f0;
-    }
-    
-    .section-title {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #1f2937;
-    }
-    
-    .section-icon {
-        width: 28px;
-        height: 28px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.2rem;
-    }
-    
-    /* Enhanced empty state */
-    .empty-state {
-        text-align: center;
-        padding: 48px 24px;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border-radius: 16px;
-        border: 2px dashed #e2e8f0;
-        margin: 24px 0;
-    }
-    
-    .empty-state-icon {
-        font-size: 3rem;
-        margin-bottom: 16px;
-        opacity: 0.6;
-    }
-    
-    .empty-state h4 {
-        color: #374151;
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin-bottom: 8px;
-    }
-    
-    .empty-state p {
-        color: #6b7280;
-        font-size: 1rem;
-        line-height: 1.6;
-        max-width: 500px;
-        margin: 0 auto;
-    }
-    
-    /* Responsive improvements */
-    @media (max-width: 768px) {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartThings Devices</title>
+    <!-- Materialize CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <style>
+        /* Custom styles for the devices page */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 24px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .icon {
+            font-size: 1.5rem;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25);
+        }
+        
+        .refresh-btn:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 15px rgba(16, 185, 129, 0.4);
+        }
+        
         .device-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-        
-        .device-header {
-            padding: 16px 20px;
-        }
-        
-        .device-body {
-            padding: 20px;
+            margin-top: 24px;
         }
         
         .temperature-display {
-            font-size: 2.5rem;
+            font-size: 3rem;
+            font-weight: 800;
+            margin: 8px 0;
         }
-        
-        .control-input-group {
-            flex-direction: column;
-        }
-        
-        .control-btn {
-            width: 100%;
-        }
-    }
-</style>
+    </style>
+</head>
+<body>
 
-<div class="section-header">
-    <h1 class="page-title">
-        <span class="icon">📱</span>
-        SmartThings Devices
-    </h1>
-    <button class="refresh-btn" onclick="refreshDevices()">
-        🔄 Refresh
-    </button>
+<div class="container">
+    <div class="section-header">
+        <h1 class="page-title">
+            <span class="icon">📱</span>
+            SmartThings Devices
+        </h1>
+        <button class="refresh-btn" onclick="refreshDevices()">
+            🔄 Refresh
+        </button>
+    </div>
+
+    <% if (locations && locations.length > 0) { %>
+        <div class="mb-6">
+            <div class="section-title">
+                <span class="section-icon">🏠</span>
+                <span>Locations</span>
+                <span class="device-count"><%= locations.length %> location<%= locations.length !== 1 ? 's' : '' %></span>
+            </div>
+            <div class="row device-grid">
+                <% locations.forEach(location => { %>
+                    <div class="col s12 m6 l4">
+                        <div class="card hoverable">
+                            <div class="card-image">
+                                <span class="card-title blue darken-2 white-text"> <%= location.name %> </span>
+                            </div>
+                            <div class="card-content">
+                                <p class="grey-text text-darken-2">Type: SmartThings Location</p>
+                                <div class="chip green white-text">
+                                    Active
+                                </div>
+                            </div>
+                            <div class="card-action">
+                                <a href="/locations/<%= location.locationId %>" class="btn blue">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    <% } %>
+
+    <% if (Array.isArray(thermostats) && thermostats.length > 0) { %>
+        <div class="mb-6">
+            <div class="section-title">
+                <span class="section-icon">🌡️</span>
+                <span>Thermostats</span>
+                <span class="device-count"><%= thermostats.length %> device<%= thermostats.length !== 1 ? 's' : '' %></span>
+            </div>
+            <div class="row device-grid">
+                <% thermostats.forEach(thermostat => { %>
+                    <div class="col s12 m6 l4">
+                        <div class="card hoverable" data-device-id="<%= thermostat.deviceId %>">
+                            <div class="card-image">
+                                <span class="card-title blue darken-2 white-text"> <%= thermostat.label || thermostat.name %> </span>
+                            </div>
+                            <div class="card-content">
+                                <p class="grey-text text-darken-2">Type: Smart Thermostat</p>
+                                <div class="chip green white-text">
+                                    Online
+                                </div>
+                                <div class="temperature-display blue-text text-darken-2">
+                                    <%= thermostat.temperature %>°C
+                                </div>
+                            </div>
+                            <div class="card-action">
+                                <a href="/thermostats/<%= thermostat.deviceId %>" class="btn blue">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    <% } %>
+
+    <% if (Array.isArray(switches) && switches.length > 0) { %>
+        <div class="mb-6">
+            <div class="section-title">
+                <span class="section-icon">🔌</span>
+                <span>Switches</span>
+                <span class="device-count"><%= switches.length %> device<%= switches.length !== 1 ? 's' : '' %></span>
+            </div>
+            <div class="row device-grid">
+                <% switches.forEach(switchDevice => { %>
+                    <div class="col s12 m6 l4">
+                        <div class="card hoverable" data-device-id="<%= switchDevice.deviceId %>">
+                            <div class="card-image">
+                                <span class="card-title blue darken-2 white-text"> <%= switchDevice.label || switchDevice.name %> </span>
+                            </div>
+                            <div class="card-content">
+                                <p class="grey-text text-darken-2">Type: Smart Switch</p>
+                                <div class="chip green white-text">
+                                    Online
+                                </div>
+                            </div>
+                            <div class="card-action">
+                                <a href="/switches/<%= switchDevice.deviceId %>" class="btn blue">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+    <% } %>
+
+    <% if ((!thermostats || thermostats.length === 0) && (!switches || switches.length === 0)) { %>
+        <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <h4>No Compatible Devices Found</h4>
+            <p>No thermostats or switches were found in your SmartThings account. 
+               Make sure you have compatible devices added to your SmartThings hub.</p>
+        </div>
+    <% } %>
 </div>
 
-<% if (locations && locations.length > 0) { %>
-    <div class="mb-6">
-        <div class="section-title">
-            <span class="section-icon">🏠</span>
-            <span>Locations</span>
-            <span class="device-count"><%= locations.length %> location<%= locations.length !== 1 ? 's' : '' %></span>
-        </div>
-        <div class="device-grid">
-            <% locations.forEach(location => { %>
-                <div class="device-card">
-                    <div class="device-header">
-                        <div class="device-header-content">
-                            <div class="device-info">
-                                <div class="device-name"><%= location.name %></div>
-                                <div class="device-type">SmartThings Location</div>
-                            </div>
-                            <div class="status-indicator status-online">
-                                <div class="status-dot"></div>
-                                <span>Active</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="device-body">
-                        <div class="device-meta">
-                            <div class="device-meta-text">
-                                Location ID: <%= location.locationId %>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <% }); %>
-        </div>
-    </div>
-<% } %>
-
-<% if (thermostats && thermostats.length > 0) { %>
-    <div class="mb-6">
-        <div class="section-title">
-            <span class="section-icon">🌡️</span>
-            <span>Thermostats</span>
-            <span class="device-count"><%= thermostats.length %> device<%= thermostats.length !== 1 ? 's' : '' %></span>
-        </div>
-        <div class="device-grid">
-            <% thermostats.forEach(thermostat => { %>
-                <div class="device-card" data-device-id="<%= thermostat.deviceId %>">
-                    <div class="device-header">
-                        <div class="device-header-content">
-                            <div class="device-info">
-                                <div class="device-name"><%= thermostat.label || thermostat.name %></div>
-                                <div class="device-type">Smart Thermostat</div>
-                            </div>
-                            <div class="status-indicator status-online">
-                                <div class="status-dot"></div>
-                                <span>Online</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="device-body">
-                        <div class="temperature-section">
-                            <div class="temperature-label">Current Temperature</div>
-                            <div class="temperature-display" id="temp-<%= thermostat.deviceId %>">
-                                --°F
-                            </div>
-                        </div>
-                        
-                        <div class="controls-grid">
-                            <div class="control-group">
-                                <label class="control-label">Set Temperature</label>
-                                <div class="control-input-group">
-                                    <input type="number" class="control-input" 
-                                           id="setpoint-<%= thermostat.deviceId %>" 
-                                           min="40" max="90" value="72">
-                                    <button class="control-btn" type="button"
-                                            onclick="setTemperature('<%= thermostat.deviceId %>')">
-                                        Set
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="control-group">
-                                <label class="control-label">Mode</label>
-                                <div class="control-input-group">
-                                    <select class="control-input" id="mode-<%= thermostat.deviceId %>"
-                                            onchange="setMode('<%= thermostat.deviceId %>')">
-                                        <option value="off">Off</option>
-                                        <option value="heat">Heat</option>
-                                        <option value="cool">Cool</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="device-meta">
-                            <div class="device-meta-text">
-                                Device ID: <%= thermostat.deviceId %>
-                                <% if (thermostat.roomId) { %>
-                                    <br>Room: <%= thermostat.roomId %>
-                                <% } %>
-                            </div>
-                        </div>
-                        
-                        <div class="capability-badges">
-                            <% thermostat.capabilities.forEach(cap => { %>
-                                <span class="capability-badge"><%= cap.id %></span>
-                            <% }); %>
-                        </div>
-                    </div>
-                </div>
-            <% }); %>
-        </div>
-    </div>
-<% } %>
-
-<% if (switches && switches.length > 0) { %>
-    <div class="mb-6">
-        <div class="section-title">
-            <span class="section-icon">🎛️</span>
-            <span>Switches</span>
-            <span class="device-count"><%= switches.length %> device<%= switches.length !== 1 ? 's' : '' %></span>
-        </div>
-        <div class="device-grid">
-            <% switches.forEach(switchDevice => { %>
-                <div class="device-card" data-device-id="<%= switchDevice.deviceId %>">
-                    <div class="device-header">
-                        <div class="device-header-content">
-                            <div class="device-info">
-                                <div class="device-name"><%= switchDevice.label || switchDevice.name %></div>
-                                <div class="device-type">Smart Switch</div>
-                            </div>
-                            <div class="status-indicator status-online">
-                                <div class="status-dot"></div>
-                                <span>Online</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="device-body">
-                        <div class="switch-toggle">
-                            <span class="switch-label">Power State</span>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" 
-                                       id="switch-<%= switchDevice.deviceId %>"
-                                       onchange="toggleSwitch('<%= switchDevice.deviceId %>')">
-                                <label class="form-check-label" for="switch-<%= switchDevice.deviceId %>">
-                                    <span id="switch-state-<%= switchDevice.deviceId %>">Unknown</span>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="device-meta">
-                            <div class="device-meta-text">
-                                Device ID: <%= switchDevice.deviceId %>
-                                <% if (switchDevice.roomId) { %>
-                                    <br>Room: <%= switchDevice.roomId %>
-                                <% } %>
-                            </div>
-                        </div>
-                        
-                        <div class="capability-badges">
-                            <% switchDevice.capabilities.forEach(cap => { %>
-                                <span class="capability-badge"><%= cap.id %></span>
-                            <% }); %>
-                        </div>
-                    </div>
-                </div>
-            <% }); %>
-        </div>
-    </div>
-<% } %>
-
-<% if ((!thermostats || thermostats.length === 0) && (!switches || switches.length === 0)) { %>
-    <div class="empty-state">
-        <div class="empty-state-icon">⚠️</div>
-        <h4>No Compatible Devices Found</h4>
-        <p>No thermostats or switches were found in your SmartThings account. 
-           Make sure you have compatible devices added to your SmartThings hub.</p>
-    </div>
-<% } %>
-
+<!-- Materialize JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 <script>
 async function refreshDevices() {
     window.location.reload();
@@ -737,3 +343,5 @@ document.addEventListener('DOMContentLoaded', () => {
     <% } %>
 });
 </script>
+</body>
+</html>
