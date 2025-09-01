@@ -263,6 +263,123 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
         }
     });
 
+    // Individual Device Control Routes
+    router.get('/device/:deviceId/control', requireAuth, async (req: Request, res: Response) => {
+        try {
+            const deviceId = req.params.deviceId;
+            const devices = await deviceManager.getDevices();
+            const device = devices.find(d => d.deviceId === deviceId);
+            
+            if (!device) {
+                return res.status(404).render('error', {
+                    title: 'Device Not Found',
+                    currentPage: '',
+                    showCoordinator: !!getCoordinator(),
+                    message: `Device with ID ${deviceId} was not found in your SmartThings account.`
+                });
+            }
+
+            // Check if device has thermostat capability
+            const hasThermostateCapability = device.capabilities.some(cap => cap.id === 'thermostat');
+            if (!hasThermostateCapability) {
+                return res.status(400).render('error', {
+                    title: 'Device Not Supported',
+                    currentPage: '',
+                    showCoordinator: !!getCoordinator(),
+                    message: `Device ${device.label || device.name} does not have thermostat capabilities and cannot be manually controlled.`
+                });
+            }
+
+            // Get current device status
+            let status = null;
+            try {
+                status = await deviceManager.getDeviceStatus(deviceId);
+            } catch (error) {
+                console.error(`Error getting device status for ${deviceId}:`, error);
+            }
+
+            res.render('device-control', {
+                title: `Manual Control - ${device.label || device.name}`,
+                currentPage: 'device-control',
+                showCoordinator: !!getCoordinator(),
+                device,
+                status
+            });
+        } catch (error) {
+            console.error('Error loading device control page:', error);
+            res.render('error', {
+                title: 'Device Control Error',
+                currentPage: '',
+                showCoordinator: !!getCoordinator(),
+                message: 'Failed to load device control page'
+            });
+        }
+    });
+
+    router.post('/device/:deviceId/control/power', requireAuth, async (req: Request, res: Response) => {
+        const { state } = req.body;
+        
+        try {
+            console.log(`[DEVICE_CONTROL] Setting power ${state} on device ${req.params.deviceId}`);
+            await deviceManager.switchDevice(req.params.deviceId, state);
+            res.json({ success: true, message: `Device power set to ${state}` });
+        } catch (error) {
+            console.error('Error setting device power (device control):', error);
+            res.status(500).json({ error: 'Failed to set device power' });
+        }
+    });
+
+    router.post('/device/:deviceId/control/mode', requireAuth, async (req: Request, res: Response) => {
+        const { mode } = req.body;
+        
+        try {
+            console.log(`[DEVICE_CONTROL] Setting mode ${mode} on device ${req.params.deviceId}`);
+            await deviceManager.setThermostatMode(req.params.deviceId, mode);
+            res.json({ success: true, message: `Device mode set to ${mode}` });
+        } catch (error) {
+            console.error('Error setting device mode (device control):', error);
+            res.status(500).json({ error: 'Failed to set device mode' });
+        }
+    });
+
+    router.post('/device/:deviceId/control/temperature', requireAuth, async (req: Request, res: Response) => {
+        const { temperature, scale = 'F' } = req.body;
+        
+        try {
+            console.log(`[DEVICE_CONTROL] Setting temperature ${temperature}°${scale} on device ${req.params.deviceId}`);
+            await deviceManager.setThermostatTemperature(
+                req.params.deviceId,
+                parseInt(temperature),
+                scale
+            );
+            res.json({ success: true, message: `Device temperature set to ${temperature}°${scale}` });
+        } catch (error) {
+            console.error('Error setting device temperature (device control):', error);
+            res.status(500).json({ error: 'Failed to set device temperature' });
+        }
+    });
+
+    router.post('/device/:deviceId/control/command', requireAuth, async (req: Request, res: Response) => {
+        const { capability, command, arguments: args } = req.body;
+        
+        try {
+            console.log(`[DEVICE_CONTROL] Executing ${capability}.${command}(${JSON.stringify(args || [])}) on device ${req.params.deviceId}`);
+            await deviceManager.executeDeviceCommand(
+                req.params.deviceId,
+                capability,
+                command,
+                args || []
+            );
+            res.json({ 
+                success: true, 
+                message: `Command executed: ${capability}.${command}(${JSON.stringify(args || [])})` 
+            });
+        } catch (error) {
+            console.error('Error executing custom command (device control):', error);
+            res.status(500).json({ error: 'Failed to execute custom command' });
+        }
+    });
+
     // Auth status routes (available regardless of coordinator)
     router.get('/auth/status', requireAuth, (req: Request, res: Response) => {
         const storageInfo = oauth.getStorageInfo();
@@ -289,132 +406,6 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
         }
     });
 
-    // Manual Testing Routes
-    router.get('/manual-test', requireAuth, async (req: Request, res: Response) => {
-        const coordinator = getCoordinator();
-        if (!coordinator) {
-            return res.status(404).render('error', {
-                title: 'Manual Test Not Available',
-                currentPage: '',
-                showCoordinator: false,
-                message: 'Manual testing is only available when the Heat Pump Coordinator is configured and running.'
-            });
-        }
-
-        res.render('manual-test', {
-            title: 'Manual Device Testing',
-            currentPage: 'manual-test',
-            showCoordinator: true
-        });
-    });
-
-    router.get('/manual-test/devices', requireAuth, async (req: Request, res: Response) => {
-        const coordinator = getCoordinator();
-        if (!coordinator) {
-            return res.status(404).json({ error: 'Coordinator not available' });
-        }
-
-        try {
-            const config = coordinator['config'];
-            const stateManager = config.stateManager;
-            const deviceIds = config.deviceIds;
-            const roomNames = config.roomNames;
-
-            const devices = [];
-            for (let i = 0; i < deviceIds.length; i++) {
-                const deviceId = deviceIds[i];
-                const roomName = roomNames[i] || `Room ${i + 1}`;
-                const state = stateManager.getMiniSplitState(deviceId);
-                
-                let status = null;
-                try {
-                    status = await deviceManager.getDeviceStatus(deviceId);
-                } catch (error) {
-                    console.error(`Error getting status for ${deviceId}:`, error);
-                }
-
-                devices.push({
-                    deviceId,
-                    name: state?.name || `${roomName} Mini-Split`,
-                    room: roomName,
-                    isOnline: state?.isOnline || false,
-                    currentTemperature: state?.currentTemperature || 0,
-                    targetTemperature: state?.targetTemperature || 72,
-                    mode: state?.mode || 'off',
-                    status
-                });
-            }
-
-            res.json(devices);
-        } catch (error) {
-            console.error('Error getting manual test devices:', error);
-            res.status(500).json({ error: 'Failed to get device information' });
-        }
-    });
-
-    router.post('/manual-test/:deviceId/power', requireAuth, async (req: Request, res: Response) => {
-        const { state } = req.body;
-        
-        try {
-            console.log(`[MANUAL_TEST] Setting power ${state} on device ${req.params.deviceId}`);
-            await deviceManager.switchDevice(req.params.deviceId, state);
-            res.json({ success: true, message: `Device power set to ${state}` });
-        } catch (error) {
-            console.error('Error setting device power (manual test):', error);
-            res.status(500).json({ error: 'Failed to set device power' });
-        }
-    });
-
-    router.post('/manual-test/:deviceId/mode', requireAuth, async (req: Request, res: Response) => {
-        const { mode } = req.body;
-        
-        try {
-            console.log(`[MANUAL_TEST] Setting mode ${mode} on device ${req.params.deviceId}`);
-            await deviceManager.setThermostatMode(req.params.deviceId, mode);
-            res.json({ success: true, message: `Device mode set to ${mode}` });
-        } catch (error) {
-            console.error('Error setting device mode (manual test):', error);
-            res.status(500).json({ error: 'Failed to set device mode' });
-        }
-    });
-
-    router.post('/manual-test/:deviceId/temperature', requireAuth, async (req: Request, res: Response) => {
-        const { temperature, scale = 'F' } = req.body;
-        
-        try {
-            console.log(`[MANUAL_TEST] Setting temperature ${temperature}°${scale} on device ${req.params.deviceId}`);
-            await deviceManager.setThermostatTemperature(
-                req.params.deviceId,
-                parseInt(temperature),
-                scale
-            );
-            res.json({ success: true, message: `Device temperature set to ${temperature}°${scale}` });
-        } catch (error) {
-            console.error('Error setting device temperature (manual test):', error);
-            res.status(500).json({ error: 'Failed to set device temperature' });
-        }
-    });
-
-    router.post('/manual-test/:deviceId/command', requireAuth, async (req: Request, res: Response) => {
-        const { capability, command, arguments: args } = req.body;
-        
-        try {
-            console.log(`[MANUAL_TEST] Executing ${capability}.${command}(${JSON.stringify(args || [])}) on device ${req.params.deviceId}`);
-            await deviceManager.executeDeviceCommand(
-                req.params.deviceId,
-                capability,
-                command,
-                args || []
-            );
-            res.json({ 
-                success: true, 
-                message: `Command executed: ${capability}.${command}(${JSON.stringify(args || [])})` 
-            });
-        } catch (error) {
-            console.error('Error executing custom command (manual test):', error);
-            res.status(500).json({ error: 'Failed to execute custom command' });
-        }
-    });
 
     return router;
 }

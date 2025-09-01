@@ -223,6 +223,12 @@
                                         <span class="badge bg-secondary capability-badge me-1"><%= cap.id %></span>
                                     <% }); %>
                                 </div>
+                                <div class="mt-3 d-flex gap-2">
+                                    <button class="btn btn-outline-primary btn-sm flex-grow-1" 
+                                            onclick="openDeviceControl('<%= thermostat.deviceId %>')">
+                                        🔧 Manual Control
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -407,6 +413,10 @@ function showToast(message, type) {
     
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
+}
+
+function openDeviceControl(deviceId) {
+    window.location.href = `/admin/device/${deviceId}/control`;
 }
 
 // Load initial device status
