@@ -744,15 +744,47 @@ function updateDeviceDisplay(status) {
         statusCard.className = `device-status-card ${powerState === 'on' ? 'online' : 'offline'}`;
     }
     
-    // Update mode
+    // Update mode - handle both thermostat and airConditioner modes
+    let currentMode = null;
     if (main.thermostat && main.thermostat.thermostatMode) {
-        const mode = main.thermostat.thermostatMode.value;
-        document.getElementById('current-mode').textContent = mode.toUpperCase();
+        // Standard thermostat device
+        currentMode = main.thermostat.thermostatMode.value;
+    } else if (main.airConditionerMode && main.airConditionerMode.airConditionerMode) {
+        // Samsung air conditioner device
+        const acMode = main.airConditionerMode.airConditionerMode.value;
+        // Map Samsung AC modes to standard thermostat modes for UI
+        const modeMapping = {
+            'cool': 'cool',
+            'heat': 'heat',
+            'auto': 'auto',
+            'wind': 'fan',
+            'dry': 'dry',
+            'off': 'off'
+        };
+        currentMode = modeMapping[acMode] || acMode;
+    }
+    
+    if (currentMode) {
+        document.getElementById('current-mode').textContent = currentMode.toUpperCase();
         
-        // Update mode buttons
+        // Update mode buttons - only show supported modes for this device
         const modeButtons = document.querySelectorAll('.mode-btn');
         modeButtons.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.mode === mode);
+            const btnMode = btn.dataset.mode;
+            // For Samsung devices, map UI modes back to AC modes for comparison
+            let isActive = false;
+            if (main.airConditionerMode) {
+                const reverseMapping = {
+                    'cool': 'cool',
+                    'heat': 'heat',
+                    'off': 'off'
+                };
+                const targetAcMode = reverseMapping[btnMode] || btnMode;
+                isActive = main.airConditionerMode.airConditionerMode.value === targetAcMode;
+            } else {
+                isActive = btnMode === currentMode;
+            }
+            btn.classList.toggle('active', isActive);
         });
     }
 }

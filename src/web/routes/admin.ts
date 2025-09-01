@@ -313,9 +313,22 @@ export function createAdminRoutes(oauth: SmartThingsOAuth, deviceManager: SmartT
             // Get current device status
             let status = null;
             try {
+                console.log(`[DEVICE_CONTROL] Fetching status for device: ${deviceId}`);
                 status = await deviceManager.getDeviceStatus(deviceId);
+                console.log(`[DEVICE_CONTROL] Device status for ${deviceId}:`, JSON.stringify(status, null, 2));
+                
+                // Log specific fields we're looking for
+                if (status && status.components && status.components.main) {
+                    const main = status.components.main;
+                    console.log(`[DEVICE_CONTROL] Key status fields for ${deviceId}:`);
+                    console.log(`  - Switch: ${main.switch?.switch?.value || 'not found'}`);
+                    console.log(`  - Temperature: ${main.temperatureMeasurement?.temperature?.value || 'not found'}`);
+                    console.log(`  - Thermostat Mode: ${main.thermostat?.thermostatMode?.value || 'not found'}`);
+                    console.log(`  - AC Mode: ${main.airConditionerMode?.airConditionerMode?.value || 'not found'}`);
+                    console.log(`  - Cooling Setpoint: ${main.thermostatCoolingSetpoint?.coolingSetpoint?.value || 'not found'}`);
+                }
             } catch (error) {
-                console.error(`Error getting device status for ${deviceId}:`, error);
+                console.error(`[DEVICE_CONTROL] Error getting device status for ${deviceId}:`, error);
             }
 
             res.render('device-control', {

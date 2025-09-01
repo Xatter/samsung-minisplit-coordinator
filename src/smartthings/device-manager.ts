@@ -192,26 +192,32 @@ export class SmartThingsDeviceManager {
 
     async setThermostatMode(deviceId: string, mode: 'heat' | 'cool' | 'off'): Promise<void> {
         const isAC = await this.isAirConditioner(deviceId);
+        console.log(`[DEVICE_MANAGER] Setting mode for device ${deviceId}: ${mode}, isAC: ${isAC}`);
         
         if (isAC) {
             // Air conditioner devices use airConditionerMode capability
             const acMode = this.convertToAirConditionerMode(mode);
+            console.log(`[DEVICE_MANAGER] Converted mode ${mode} to AC mode: ${acMode}`);
             
             // For air conditioners, ensure the unit is on when setting a mode (except 'off')
             if (mode !== 'off') {
+                console.log(`[DEVICE_MANAGER] Turning on device ${deviceId} before setting mode`);
                 await this.executeDeviceCommand(deviceId, 'switch', 'on');
                 // Small delay to ensure switch command is processed
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
             
+            console.log(`[DEVICE_MANAGER] Setting AC mode to ${acMode} for device ${deviceId}`);
             await this.executeDeviceCommand(deviceId, 'airConditionerMode', 'setAirConditionerMode', [acMode]);
             
             // Turn off the switch when mode is 'off'
             if (mode === 'off') {
+                console.log(`[DEVICE_MANAGER] Turning off device ${deviceId} for 'off' mode`);
                 await this.executeDeviceCommand(deviceId, 'switch', 'off');
             }
         } else {
             // Traditional thermostats use thermostat capability
+            console.log(`[DEVICE_MANAGER] Using thermostat capability for traditional thermostat ${deviceId}`);
             await this.executeDeviceCommand(deviceId, 'thermostat', 'setThermostatMode', [mode]);
         }
     }
