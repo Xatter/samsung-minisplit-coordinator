@@ -421,13 +421,13 @@ function openDeviceControl(deviceId) {
 
 // Load initial device status
 document.addEventListener('DOMContentLoaded', () => {
-    <% if (thermostats) { %>
+    <% if (typeof thermostats !== 'undefined' && thermostats && thermostats.length > 0) { %>
         <% thermostats.forEach(thermostat => { %>
             loadDeviceStatus('<%= thermostat.deviceId %>');
         <% }); %>
     <% } %>
     
-    <% if (switches) { %>
+    <% if (typeof switches !== 'undefined' && switches && switches.length > 0) { %>
         <% switches.forEach(switchDevice => { %>
             loadDeviceStatus('<%= switchDevice.deviceId %>');
         <% }); %>
