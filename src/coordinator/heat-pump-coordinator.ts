@@ -175,13 +175,10 @@ export class HeatPumpCoordinator {
         }
 
         console.log('Syncing device states from SmartThings...');
-        console.log(`DEBUG: Device IDs to sync: [${this.config.deviceIds.join(', ')}]`);
         
         for (const deviceId of this.config.deviceIds) {
             try {
-                console.log(`DEBUG: Fetching status for device: ${deviceId}`);
                 const status = await this.config.deviceManager.getDeviceStatus(deviceId);
-                console.log(`DEBUG: Full status response for ${deviceId}:`, JSON.stringify(status, null, 2));
                 const mainComponent = status.components.main;
 
                 if (mainComponent) {
@@ -195,21 +192,14 @@ export class HeatPumpCoordinator {
                         const tempValue = tempData.value;
                         const tempUnit = (tempData as any).unit || 'C'; // Default to Celsius if no unit specified
                         
-                        console.log(`DEBUG: Raw temperature data for ${deviceId}:`, JSON.stringify(tempData, null, 2));
-                        console.log(`DEBUG: Temperature: ${tempValue}°${tempUnit}, timestamp: ${tempData.timestamp || 'none'}`);
-                        
                         // Convert to Fahrenheit if needed
                         if (tempUnit === 'F') {
                             // Already in Fahrenheit
                             updates.currentTemperature = Math.round(tempValue);
-                            console.log(`DEBUG: Temperature already in Fahrenheit: ${tempValue}°F → ${updates.currentTemperature}°F`);
                         } else {
                             // Assume Celsius, convert to Fahrenheit
                             updates.currentTemperature = Math.round((tempValue * 9/5) + 32);
-                            console.log(`DEBUG: Converted temperature: ${tempValue}°C → ${updates.currentTemperature}°F`);
                         }
-                    } else {
-                        console.log(`DEBUG: No temperature data for ${deviceId}, mainComponent.temperatureMeasurement:`, JSON.stringify(mainComponent.temperatureMeasurement, null, 2));
                     }
 
                     if (mainComponent.thermostatHeatingSetpoint?.heatingSetpoint) {
@@ -222,7 +212,6 @@ export class HeatPumpCoordinator {
                         } else {
                             updates.targetTemperature = Math.round((setpointValue * 9/5) + 32);
                         }
-                        console.log(`DEBUG: Heating setpoint: ${setpointValue}°${setpointUnit} → ${updates.targetTemperature}°F`);
                     } else if (mainComponent.thermostatCoolingSetpoint?.coolingSetpoint) {
                         const setpointData = mainComponent.thermostatCoolingSetpoint.coolingSetpoint;
                         const setpointValue = setpointData.value;
@@ -233,7 +222,6 @@ export class HeatPumpCoordinator {
                         } else {
                             updates.targetTemperature = Math.round((setpointValue * 9/5) + 32);
                         }
-                        console.log(`DEBUG: Cooling setpoint: ${setpointValue}°${setpointUnit} → ${updates.targetTemperature}°F`);
                     }
 
                     if (mainComponent.thermostat?.thermostatMode) {
