@@ -36,15 +36,11 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
     let stateUpdateTimer: NodeJS.Timeout | null = null;
 
     if (coordinator) {
-        // Create a single coordinated thermostat
+        // Create a single coordinated thermostat (Off/Auto modes only)
         const coordinatedThermostat = await server.add(ThermostatDevice.with(
-            ThermostatServer.with("Heating", "Cooling", "AutoMode")
+            ThermostatServer.with("AutoMode")
         ), {
             id: "coordinated-thermostat",
-            thermostat: {
-                controlSequenceOfOperation: 4,
-                minSetpointDeadBand: 25,
-            },
         });
 
         const thermostatBehavior = (coordinatedThermostat as any).behaviors.require(ThermostatServer);
@@ -63,6 +59,10 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
             console.log(`Initial thermostat setup - Average temperature: ${avgCurrentTemp}°F`);
             
             try {
+                // Set thermostat configuration for Off/Auto mode operation
+                thermostatBehavior.state.controlSequenceOfOperation = 4; // Heat+Cool with setpoint overlap  
+                thermostatBehavior.state.minSetpointDeadBand = 25; // 2.5°C minimum differential
+                
                 // Set initial state values
                 const tempCelsius = (avgCurrentTemp - 32) * 5 / 9;
                 thermostatBehavior.state.localTemperature = Math.round(tempCelsius * 100); // Convert °F to °C * 100
@@ -70,13 +70,14 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                 thermostatBehavior.state.occupiedHeatingSetpoint = Math.round(((status.globalRange.min - 32) * 5 / 9) * 100);
                 thermostatBehavior.state.occupiedCoolingSetpoint = Math.round(((status.globalRange.max - 32) * 5 / 9) * 100);
                 
-                // Map system mode
+                // Map system mode for HomeKit (Off/Auto only)
+                // Off = 0, Auto = 1 (Auto will determine heat/cool based on conditions)
                 const modeMapping: {[key: string]: number} = {
-                    'off': 0,
-                    'cool': 3,
-                    'heat': 4,
+                    'off': 0,   // Off mode
+                    'heat': 1,  // Auto mode (system in heating)
+                    'cool': 1,  // Auto mode (system in cooling)
                 };
-                thermostatBehavior.state.systemMode = modeMapping[status.globalMode] || 1;
+                thermostatBehavior.state.systemMode = modeMapping[status.globalMode] || 0;
             } catch (error) {
                 console.error('Error setting initial thermostat state:', error);
             }
@@ -99,18 +100,19 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                     thermostatBehavior.state.occupiedHeatingSetpoint = Math.round(((status.globalRange.min - 32) * 5 / 9) * 100);
                     thermostatBehavior.state.occupiedCoolingSetpoint = Math.round(((status.globalRange.max - 32) * 5 / 9) * 100);
                     
+                    // Map system mode for HomeKit (Off/Auto only)
                     const modeMapping: {[key: string]: number} = {
-                        'off': 0,
-                        'cool': 3,
-                        'heat': 4,
+                        'off': 0,   // Off mode
+                        'heat': 1,  // Auto mode (system in heating)
+                        'cool': 1,  // Auto mode (system in cooling)
                     };
-                    thermostatBehavior.state.systemMode = modeMapping[status.globalMode] || 1;
+                    thermostatBehavior.state.systemMode = modeMapping[status.globalMode] || 0;
                 } catch (error) {
                     console.error('Error updating thermostat state:', error);
                 }
-            }, 30000); // Update every 30 seconds
+            }, 10000); // Update every 10 seconds for faster HomeKit feedback
             
-            console.log(`Started Matter thermostat state update timer (30s interval)`);
+            console.log(`Started Matter thermostat state update timer (10s interval for immediate HomeKit feedback)`);
         }
 
         if (thermostatBehavior && bridge) {
@@ -120,7 +122,9 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                 try {
                     const currentRange = coordinator.getCoordinatorStatus().globalRange;
                     const newMinTemp = Math.round(((value - 32) * 5 / 9) * 10) / 10; // Convert and round
-                    await coordinator.setGlobalTemperatureRange(Math.round((newMinTemp * 9/5) + 32), currentRange.max);
+                    const newMinTempF = Math.round((newMinTemp * 9/5) + 32);
+                    await coordinator.setGlobalTemperatureRangeImmediate(newMinTempF, currentRange.max);
+                    console.log('Applied heating setpoint change immediately to devices');
                 } catch (error) {
                     console.error('Error updating coordinated heating setpoint:', error);
                 }
@@ -132,23 +136,29 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                 try {
                     const currentRange = coordinator.getCoordinatorStatus().globalRange;
                     const newMaxTemp = Math.round(((value - 32) * 5 / 9) * 10) / 10; // Convert and round
-                    await coordinator.setGlobalTemperatureRange(currentRange.min, Math.round((newMaxTemp * 9/5) + 32));
+                    const newMaxTempF = Math.round((newMaxTemp * 9/5) + 32);
+                    await coordinator.setGlobalTemperatureRangeImmediate(currentRange.min, newMaxTempF);
+                    console.log('Applied cooling setpoint change immediately to devices');
                 } catch (error) {
                     console.error('Error updating coordinated cooling setpoint:', error);
                 }
             });
 
-            // Handle system mode changes
+            // Handle system mode changes (Off/Auto only)
             thermostatBehavior.events.systemMode$Changed.on(async (value: any) => {
-                console.log(`Coordinated thermostat mode changed: ${value}`);
+                console.log(`HomeKit thermostat mode changed: ${value}`);
                 try {
-                    const modeMapping: {[key: number]: 'heat' | 'cool' | 'off'} = {
-                        0: 'off',
-                        3: 'cool', // Cool
-                        4: 'heat', // Heat
-                    };
-                    const mode = modeMapping[value] || 'off';
-                    await coordinator.setGlobalMode(mode, 'homekit_control');
+                    if (value === 0) {
+                        // Off mode - turn off all devices
+                        await coordinator.setGlobalMode('off', 'homekit_control');
+                        console.log('HomeKit Off mode - turned off all devices immediately');
+                    } else if (value === 1) {
+                        // Auto mode - let coordinator determine heat/cool based on conditions
+                        console.log('HomeKit Auto mode - triggering coordination cycle to determine optimal mode');
+                        await coordinator.runCoordinationCycle();
+                    } else {
+                        console.log(`Unexpected HomeKit mode value: ${value}, ignoring`);
+                    }
                 } catch (error) {
                     console.error('Error updating coordinated mode:', error);
                 }
@@ -407,8 +417,8 @@ async function main() {
                 console.log('4. Restart the server');
             }
 
-            // Start periodic sync for bridge (reduced frequency if coordinator is active)
-            const syncInterval = coordinator ? 60000 : 30000; // 1 min vs 30 sec
+            // Start periodic sync for bridge (optimized for immediate HomeKit response)
+            const syncInterval = coordinator ? 30000 : 30000; // 30 sec for immediate feedback
             bridge.startPeriodicSync(syncInterval);
 
         } else {
