@@ -11,6 +11,10 @@ export interface MiniSplitState {
     lastUpdated: number;
     room: string;
     priority: number; // 1-10, higher = more important for coordination
+    lastManualTemperatureChange?: number; // timestamp of last manual temperature adjustment
+    manualTemperatureOverride?: boolean; // true if user manually set temperature via remote
+    lastCoordinatorSetTemperature?: number; // last temperature set by coordinator
+    lastCoordinatorSetTime?: number; // when coordinator last set temperature
 }
 
 export interface SystemState {
@@ -212,12 +216,39 @@ export class StateManager {
             lastUpdated: Date.now(),
             room: existing?.room || 'Unknown',
             priority: existing?.priority || 5,
+            lastManualTemperatureChange: existing?.lastManualTemperatureChange,
+            manualTemperatureOverride: existing?.manualTemperatureOverride,
+            lastCoordinatorSetTemperature: existing?.lastCoordinatorSetTemperature,
+            lastCoordinatorSetTime: existing?.lastCoordinatorSetTime,
             ...updates
         };
 
         // Track mode changes for individual devices
         if (existing && existing.mode !== updated.mode) {
             this.addModeChangeEvent(deviceId, existing.mode, updated.mode, 'user_request');
+        }
+
+        // Detect manual temperature changes by comparing against recent coordinator actions
+        if (existing && 
+            'targetTemperature' in updates && 
+            existing.targetTemperature !== updates.targetTemperature &&
+            !updates.hasOwnProperty('manualTemperatureOverride')) {
+            
+            // Check if this change matches a recent coordinator action
+            const coordinatorSetRecently = existing.lastCoordinatorSetTime && 
+                (Date.now() - existing.lastCoordinatorSetTime) < 60000; // within last minute
+            
+            const matchesCoordinatorTemp = existing.lastCoordinatorSetTemperature === updates.targetTemperature;
+            
+            if (coordinatorSetRecently && matchesCoordinatorTemp) {
+                // This change matches what the coordinator recently set - not manual
+                console.log(`✓ Temperature change matches recent coordinator action: ${updated.name} → ${updates.targetTemperature}°F`);
+            } else {
+                // This change doesn't match recent coordinator actions - likely manual
+                updated.lastManualTemperatureChange = Date.now();
+                updated.manualTemperatureOverride = true;
+                console.log(`🎛️  Manual temperature change detected on ${updated.name}: ${existing.targetTemperature}°F → ${updates.targetTemperature}°F`);
+            }
         }
 
         this.state.miniSplits.set(deviceId, updated);
@@ -356,5 +387,58 @@ export class StateManager {
         }
 
         return null;
+    }
+
+    // Manual override management
+    public clearManualTemperatureOverride(deviceId: string): void {
+        const device = this.state.miniSplits.get(deviceId);
+        if (device) {
+            device.manualTemperatureOverride = false;
+            device.lastManualTemperatureChange = undefined;
+            console.log(`🔄 Manual temperature override cleared for ${device.name}`);
+        }
+    }
+
+    public clearAllManualTemperatureOverrides(): void {
+        for (const device of this.state.miniSplits.values()) {
+            if (device.manualTemperatureOverride) {
+                device.manualTemperatureOverride = false;
+                device.lastManualTemperatureChange = undefined;
+                console.log(`🔄 Manual temperature override cleared for ${device.name}`);
+            }
+        }
+    }
+
+    public getDevicesWithManualOverrides(): MiniSplitState[] {
+        return this.getAllMiniSplitStates().filter(device => device.manualTemperatureOverride);
+    }
+
+    public isTemperatureWithinGlobalRange(temperature: number): boolean {
+        return temperature >= this.state.globalMinTemp && temperature <= this.state.globalMaxTemp;
+    }
+
+    public shouldRespectManualOverride(device: MiniSplitState): boolean {
+        if (!device.manualTemperatureOverride || !device.lastManualTemperatureChange) {
+            return false;
+        }
+
+        // Check if the manual override temperature is within the global range
+        const withinRange = this.isTemperatureWithinGlobalRange(device.targetTemperature);
+        
+        // Check if the manual change was recent (within last 2 hours)
+        const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
+        const isRecent = device.lastManualTemperatureChange > twoHoursAgo;
+
+        return withinRange && isRecent;
+    }
+
+    // Track coordinator temperature actions for accurate manual detection
+    public recordCoordinatorTemperatureSet(deviceId: string, temperature: number): void {
+        const device = this.state.miniSplits.get(deviceId);
+        if (device) {
+            device.lastCoordinatorSetTemperature = temperature;
+            device.lastCoordinatorSetTime = Date.now();
+            console.log(`📝 Recorded coordinator action: ${device.name} set to ${temperature}°F`);
+        }
     }
 }
