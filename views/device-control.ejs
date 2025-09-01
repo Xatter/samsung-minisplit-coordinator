@@ -628,86 +628,6 @@
 const deviceId = '<%= device.deviceId %>';
 let autoRefreshInterval = null;
 
-// Initialize page
-document.addEventListener('DOMContentLoaded', () => {
-    // Use initial status if available, otherwise fetch it
-    <% if (typeof status !== 'undefined' && status) { %>
-        console.log('Using initial device status from server');
-        updateDeviceDisplay(<%= JSON.stringify(status) %>);
-    <% } else { %>
-        console.log('No initial status available, fetching from server');
-    <% } %>
-    
-    // Always fetch fresh status to ensure we have the latest
-    refreshDeviceStatus();
-    setupAutoRefresh();
-});
-
-// Auto-refresh functionality
-function setupAutoRefresh() {
-    const checkbox = document.getElementById('auto-refresh');
-    checkbox.addEventListener('change', () => {
-        if (checkbox.checked) {
-            startAutoRefresh();
-        } else {
-            stopAutoRefresh();
-        }
-    });
-    
-    if (checkbox.checked) {
-        startAutoRefresh();
-    }
-}
-
-function startAutoRefresh() {
-    stopAutoRefresh();
-    autoRefreshInterval = setInterval(() => {
-        refreshDeviceStatus(true);
-    }, 5000);
-}
-
-function stopAutoRefresh() {
-    if (autoRefreshInterval) {
-        clearInterval(autoRefreshInterval);
-        autoRefreshInterval = null;
-    }
-}
-
-// Device status refresh
-async function refreshDeviceStatus(silent = false) {
-    const refreshBtn = document.getElementById('refresh-btn');
-    const refreshIcon = document.getElementById('refresh-icon');
-    
-    if (!silent) {
-        refreshBtn.disabled = true;
-        refreshIcon.innerHTML = '<span class="loading-spinner"></span>';
-    }
-    
-    try {
-        const response = await fetch(`/admin/device/${deviceId}/status`);
-        if (!response.ok) {
-            throw new Error('Failed to get device status');
-        }
-        
-        const status = await response.json();
-        updateDeviceDisplay(status);
-        
-        if (!silent) {
-            showStatus('Device status refreshed', 'success');
-        }
-    } catch (error) {
-        console.error('Error refreshing device status:', error);
-        if (!silent) {
-            showStatus('Failed to refresh device status', 'error');
-        }
-    } finally {
-        if (!silent) {
-            refreshBtn.disabled = false;
-            refreshIcon.textContent = '🔄';
-        }
-    }
-}
-
 // Update UI with device status
 function updateDeviceDisplay(status) {
     if (!status || !status.components || !status.components.main) {
@@ -795,6 +715,86 @@ function updateDeviceDisplay(status) {
             }
             btn.classList.toggle('active', isActive);
         });
+    }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    // Use initial status if available, otherwise fetch it
+    <% if (typeof status !== 'undefined' && status) { %>
+        console.log('Using initial device status from server');
+        updateDeviceDisplay(<%= JSON.stringify(status) %>);
+    <% } else { %>
+        console.log('No initial status available, fetching from server');
+    <% } %>
+    
+    // Always fetch fresh status to ensure we have the latest
+    refreshDeviceStatus();
+    setupAutoRefresh();
+});
+
+// Auto-refresh functionality
+function setupAutoRefresh() {
+    const checkbox = document.getElementById('auto-refresh');
+    checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+    });
+    
+    if (checkbox.checked) {
+        startAutoRefresh();
+    }
+}
+
+function startAutoRefresh() {
+    stopAutoRefresh();
+    autoRefreshInterval = setInterval(() => {
+        refreshDeviceStatus(true);
+    }, 5000);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+// Device status refresh
+async function refreshDeviceStatus(silent = false) {
+    const refreshBtn = document.getElementById('refresh-btn');
+    const refreshIcon = document.getElementById('refresh-icon');
+    
+    if (!silent) {
+        refreshBtn.disabled = true;
+        refreshIcon.innerHTML = '<span class="loading-spinner"></span>';
+    }
+    
+    try {
+        const response = await fetch(`/admin/device/${deviceId}/status`);
+        if (!response.ok) {
+            throw new Error('Failed to get device status');
+        }
+        
+        const status = await response.json();
+        updateDeviceDisplay(status);
+        
+        if (!silent) {
+            showStatus('Device status refreshed', 'success');
+        }
+    } catch (error) {
+        console.error('Error refreshing device status:', error);
+        if (!silent) {
+            showStatus('Failed to refresh device status', 'error');
+        }
+    } finally {
+        if (!silent) {
+            refreshBtn.disabled = false;
+            refreshIcon.textContent = '🔄';
+        }
     }
 }
 
