@@ -4,7 +4,7 @@ import { SmartThingsOAuth } from '../smartthings/oauth';
 import { SmartThingsDeviceManager } from '../smartthings/device-manager';
 
 const app = express();
-const PORT = 3001; // Different port for API
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001; // Different port for API
 
 // Enable CORS for React frontend
 app.use(cors({

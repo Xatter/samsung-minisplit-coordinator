@@ -269,9 +269,11 @@
     </main>
     
     <%- include('partials/page-scripts') %>
+    <% if (typeof script !== 'undefined' && script !== null && script !== false) { %>
     <script>
         // Add page-specific scripts here
-        <%- script || '' %>
+        <%- script %>
     </script>
+    <% } %>
 </body>
 </html>

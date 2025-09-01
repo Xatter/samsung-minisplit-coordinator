@@ -10,7 +10,7 @@ export interface TokenResponse {
     scope: string;
 }
 
-export { TokenStore } from './token-storage';
+export type { TokenStore } from './token-storage';
 
 export class SmartThingsOAuth {
     private readonly clientId: string;

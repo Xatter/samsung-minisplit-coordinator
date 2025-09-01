@@ -3,10 +3,14 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Keep node_modules and dist for Pi deployments
-# node_modules/
-# dist/
-# build/
+# Node modules (will be installed in Docker)
+node_modules/
+frontend/node_modules/
+
+# Build outputs (will be built in Docker)
+dist/
+frontend/dist/
+build/
 *.tsbuildinfo
 
 # Logs
