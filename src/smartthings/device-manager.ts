@@ -164,6 +164,24 @@ export class SmartThingsDeviceManager {
         const isAC = await this.isAirConditioner(deviceId);
         
         if (isAC) {
+            // For air conditioners, ensure the unit is on before setting temperature
+            // Check current power state first to avoid unnecessary commands
+            try {
+                const status = await this.getDeviceStatus(deviceId);
+                const switchState = status.components.main?.switch?.switch?.value;
+                
+                if (switchState === 'off') {
+                    console.log(`Turning on AC ${deviceId} before setting temperature to ${temperature}°${scale}`);
+                    await this.executeDeviceCommand(deviceId, 'switch', 'on');
+                    // Small delay to ensure switch command is processed
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            } catch (error) {
+                console.warn(`Could not check switch state for ${deviceId}, attempting to turn on anyway:`, error);
+                await this.executeDeviceCommand(deviceId, 'switch', 'on');
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
             // Air conditioner devices use thermostatCoolingSetpoint
             await this.executeDeviceCommand(deviceId, 'thermostatCoolingSetpoint', 'setCoolingSetpoint', [temperature]);
         } else {

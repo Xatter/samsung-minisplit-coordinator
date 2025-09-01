@@ -346,8 +346,8 @@ export class HeatPumpCoordinator {
         const state = this.config.stateManager.getSystemState();
 
         for (const unit of onlineUnits) {
-            // Set all units to the same mode
-            if (unit.mode !== systemMode && systemMode !== 'off') {
+            // Set all units to the same mode (including turning off when systemMode is 'off')
+            if (unit.mode !== systemMode) {
                 actions.push({
                     deviceId: unit.deviceId,
                     action: 'setMode',
