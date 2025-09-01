@@ -8,15 +8,259 @@
         }
         .status-card {
             background: white;
-            padding: 25px;
-            border-radius: 10px;
+            padding: 0;
+            border-radius: 12px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            border-left: 4px solid #667eea;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        
+        .status-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+        
+        .enhanced-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        }
+        
+        .status-card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            transform: translateX(-100%);
+            transition: transform 0.6s;
+        }
+        
+        .status-card:hover .status-card-header::before {
+            transform: translateX(100%);
+        }
+        
+        .status-card-icon {
+            font-size: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        
         .status-card h3 {
-            margin-top: 0;
-            color: #667eea;
-            font-size: 1.3em;
+            margin: 0;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .status-card-body {
+            padding: 24px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .status-indicator-enhanced {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .status-dot-enhanced {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: currentColor;
+            animation: pulseEnhanced 2s infinite;
+        }
+        
+        @keyframes pulseEnhanced {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
+        }
+        
+        .status-content {
+            flex: 1;
+        }
+        
+        .status-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            margin-bottom: 2px;
+        }
+        
+        .status-value {
+            font-size: 1rem;
+            color: #1f2937;
+            font-weight: 600;
+        }
+        
+        .large-value {
+            font-size: 1.5rem !important;
+            font-weight: 800 !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .mode-badge-enhanced {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 80px;
+        }
+        
+        .temperature-display-enhanced {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            line-height: 1;
+        }
+        
+        .temperature-subtitle {
+            text-align: center;
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            margin-bottom: 20px;
+        }
+        
+        .outdoor-temp-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        
+        .health-metric {
+            margin-bottom: 20px;
+        }
+        
+        .metric-label {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        
+        .metric-total {
+            font-size: 1rem;
+            color: #6b7280;
+            font-weight: 600;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .lighting-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 16px;
+            margin: 16px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            margin-top: 4px;
+        }
+        
+        .timestamp-info {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            margin-top: 12px;
         }
         .status-indicator {
             display: inline-block;
@@ -175,74 +419,154 @@
 </p>
 
     <div class="status-grid">
-        <div class="status-card">
-            <h3>🔧 Coordinator Status</h3>
-            <div>
-                <span class="status-indicator <%= status.isRunning ? 'status-running' : 'status-stopped' %>"></span>
-                <%= status.isRunning ? 'Active' : 'Stopped' %>
+        <div class="status-card enhanced-card">
+            <div class="status-card-header">
+                <div class="status-card-icon">🔧</div>
+                <h3>Coordinator Status</h3>
             </div>
-            <div style="margin-top: 10px;">
-                <strong>SmartThings Auth:</strong>
-                <span class="status-indicator <%= status.isAuthenticated ? 'status-running' : 'status-stopped' %>"></span>
-                <%= status.isAuthenticated ? 'Connected' : 'Not Connected' %>
-            </div>
-            <div style="margin-top: 10px;">
-                <strong>System Mode:</strong> 
-                <span class="mode-badge mode-<%= status.globalMode %>"><%= status.globalMode %></span>
-            </div>
-        </div>
-
-        <div class="status-card">
-            <h3>🌡️ Temperature Control</h3>
-            <div class="temperature-range">
-                <%= status.globalRange.min %>°F - <%= status.globalRange.max %>°F
-            </div>
-            <div style="margin-top: 10px;">
-                <strong>Outside:</strong> <%= status.outsideTemperature %>°F
-            </div>
-        </div>
-
-        <div class="status-card">
-            <h3>📊 System Health</h3>
-            <div><strong>Online Units:</strong> <%= status.onlineUnits %>/<%= status.totalUnits %></div>
-            <div><strong>Conflicts:</strong> 
-                <span class="status-indicator <%= status.unresolvedConflicts > 0 ? 'status-warning' : 'status-running' %>"></span>
-                <%= status.unresolvedConflicts %>
-            </div>
-        </div>
-
-        <div class="status-card">
-            <h3>🌤️ Weather Service</h3>
-            <div>
-                <span class="status-indicator <%= status.weatherCacheValid ? 'status-running' : 'status-warning' %>"></span>
-                <%= status.weatherCacheValid ? 'Current' : 'Stale' %>
-            </div>
-            <div style="margin-top: 5px; font-size: 0.9em; color: #666;">
-                Last Updated: <%= status.lastWeatherUpdate.toLocaleString() %>
+            <div class="status-card-body">
+                <div class="status-item">
+                    <div class="status-indicator-enhanced <%= status.isRunning ? 'status-running' : 'status-stopped' %>">
+                        <div class="status-dot-enhanced"></div>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-label">System Status</div>
+                        <div class="status-value"><%= status.isRunning ? 'Active' : 'Stopped' %></div>
+                    </div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-indicator-enhanced <%= status.isAuthenticated ? 'status-running' : 'status-stopped' %>">
+                        <div class="status-dot-enhanced"></div>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-label">SmartThings Auth</div>
+                        <div class="status-value"><%= status.isAuthenticated ? 'Connected' : 'Not Connected' %></div>
+                    </div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="mode-badge-enhanced mode-<%= status.globalMode %>">
+                        <%= status.globalMode.toUpperCase() %>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-label">System Mode</div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="status-card">
-            <h3>💡 Lighting Monitor</h3>
-            <div>
-                <span class="status-indicator <%= status.lightingMonitor.isRunning ? 'status-running' : 'status-stopped' %>"></span>
-                <%= status.lightingMonitor.enabled ? (status.lightingMonitor.isRunning ? 'Active' : 'Enabled but Stopped') : 'Disabled' %>
+        <div class="status-card enhanced-card">
+            <div class="status-card-header">
+                <div class="status-card-icon">🌡️</div>
+                <h3>Temperature Control</h3>
             </div>
-            <div style="margin-top: 10px;">
-                <strong>Devices Monitored:</strong> <%= status.lightingMonitor.devicesWithLighting.length %>
+            <div class="status-card-body">
+                <div class="temperature-display-enhanced">
+                    <%= status.globalRange.min %>°F - <%= status.globalRange.max %>°F
+                </div>
+                <div class="temperature-subtitle">Target Range</div>
+                
+                <div class="status-item">
+                    <div class="outdoor-temp-icon">🌤️</div>
+                    <div class="status-content">
+                        <div class="status-label">Outside Temperature</div>
+                        <div class="status-value large-value"><%= status.outsideTemperature %>°F</div>
+                    </div>
+                </div>
             </div>
-            <div style="margin-top: 5px;">
-                <strong>Total Checks:</strong> <%= status.lightingMonitor.totalChecks %>
+        </div>
+
+        <div class="status-card enhanced-card">
+            <div class="status-card-header">
+                <div class="status-card-icon">📊</div>
+                <h3>System Health</h3>
             </div>
-            <div style="margin-top: 5px;">
-                <strong>Lights Turned Off:</strong> <%= status.lightingMonitor.totalLightsOff %>
+            <div class="status-card-body">
+                <div class="health-metric">
+                    <div class="metric-label">Online Units</div>
+                    <div class="metric-value">
+                        <span class="large-value"><%= status.onlineUnits %></span>
+                        <span class="metric-total">/<%= status.totalUnits %></span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: <%= (status.onlineUnits / status.totalUnits) * 100 %>%"></div>
+                    </div>
+                </div>
+                
+                <div class="status-item">
+                    <div class="status-indicator-enhanced <%= status.unresolvedConflicts > 0 ? 'status-warning' : 'status-running' %>">
+                        <div class="status-dot-enhanced"></div>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-label">Conflicts</div>
+                        <div class="status-value"><%= status.unresolvedConflicts %></div>
+                    </div>
+                </div>
             </div>
-            <div style="margin-top: 5px; font-size: 0.9em; color: #666;">
-                <% if (status.lightingMonitor.lastCheckTime > 0) { %>
-                    Last Check: <%= new Date(status.lightingMonitor.lastCheckTime).toLocaleString() %>
-                <% } else { %>
-                    No checks yet
-                <% } %>
+        </div>
+
+        <div class="status-card enhanced-card">
+            <div class="status-card-header">
+                <div class="status-card-icon">🌤️</div>
+                <h3>Weather Service</h3>
+            </div>
+            <div class="status-card-body">
+                <div class="status-item">
+                    <div class="status-indicator-enhanced <%= status.weatherCacheValid ? 'status-running' : 'status-warning' %>">
+                        <div class="status-dot-enhanced"></div>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-label">Cache Status</div>
+                        <div class="status-value"><%= status.weatherCacheValid ? 'Current' : 'Stale' %></div>
+                    </div>
+                </div>
+                <div class="timestamp-info">
+                    Last Updated: <%= status.lastWeatherUpdate.toLocaleString() %>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-card enhanced-card">
+            <div class="status-card-header">
+                <div class="status-card-icon">💡</div>
+                <h3>Lighting Monitor</h3>
+            </div>
+            <div class="status-card-body">
+                <div class="status-item">
+                    <div class="status-indicator-enhanced <%= status.lightingMonitor.isRunning ? 'status-running' : 'status-stopped' %>">
+                        <div class="status-dot-enhanced"></div>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-label">Monitor Status</div>
+                        <div class="status-value">
+                            <%= status.lightingMonitor.enabled ? (status.lightingMonitor.isRunning ? 'Active' : 'Enabled but Stopped') : 'Disabled' %>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="lighting-stats">
+                    <div class="stat-item">
+                        <div class="stat-number"><%= status.lightingMonitor.devicesWithLighting.length %></div>
+                        <div class="stat-label">Devices Monitored</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><%= status.lightingMonitor.totalChecks %></div>
+                        <div class="stat-label">Total Checks</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number"><%= status.lightingMonitor.totalLightsOff %></div>
+                        <div class="stat-label">Lights Turned Off</div>
+                    </div>
+                </div>
+                
+                <div class="timestamp-info">
+                    <% if (status.lightingMonitor.lastCheckTime > 0) { %>
+                        Last Check: <%= new Date(status.lightingMonitor.lastCheckTime).toLocaleString() %>
+                    <% } else { %>
+                        No checks yet
+                    <% } %>
+                </div>
             </div>
         </div>
     </div>
