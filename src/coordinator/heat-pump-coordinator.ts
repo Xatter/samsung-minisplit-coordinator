@@ -175,10 +175,13 @@ export class HeatPumpCoordinator {
         }
 
         console.log('Syncing device states from SmartThings...');
+        console.log(`DEBUG: Device IDs to sync: [${this.config.deviceIds.join(', ')}]`);
         
         for (const deviceId of this.config.deviceIds) {
             try {
+                console.log(`DEBUG: Fetching status for device: ${deviceId}`);
                 const status = await this.config.deviceManager.getDeviceStatus(deviceId);
+                console.log(`DEBUG: Full status response for ${deviceId}:`, JSON.stringify(status, null, 2));
                 const mainComponent = status.components.main;
 
                 if (mainComponent) {
@@ -188,19 +191,49 @@ export class HeatPumpCoordinator {
                     };
 
                     if (mainComponent.temperatureMeasurement?.temperature) {
-                        // SmartThings returns temperature in Celsius, convert to Fahrenheit
-                        const tempCelsius = mainComponent.temperatureMeasurement.temperature.value;
-                        updates.currentTemperature = Math.round((tempCelsius * 9/5) + 32);
+                        const tempData = mainComponent.temperatureMeasurement.temperature;
+                        const tempValue = tempData.value;
+                        const tempUnit = (tempData as any).unit || 'C'; // Default to Celsius if no unit specified
+                        
+                        console.log(`DEBUG: Raw temperature data for ${deviceId}:`, JSON.stringify(tempData, null, 2));
+                        console.log(`DEBUG: Temperature: ${tempValue}°${tempUnit}, timestamp: ${tempData.timestamp || 'none'}`);
+                        
+                        // Convert to Fahrenheit if needed
+                        if (tempUnit === 'F') {
+                            // Already in Fahrenheit
+                            updates.currentTemperature = Math.round(tempValue);
+                            console.log(`DEBUG: Temperature already in Fahrenheit: ${tempValue}°F → ${updates.currentTemperature}°F`);
+                        } else {
+                            // Assume Celsius, convert to Fahrenheit
+                            updates.currentTemperature = Math.round((tempValue * 9/5) + 32);
+                            console.log(`DEBUG: Converted temperature: ${tempValue}°C → ${updates.currentTemperature}°F`);
+                        }
+                    } else {
+                        console.log(`DEBUG: No temperature data for ${deviceId}, mainComponent.temperatureMeasurement:`, JSON.stringify(mainComponent.temperatureMeasurement, null, 2));
                     }
 
                     if (mainComponent.thermostatHeatingSetpoint?.heatingSetpoint) {
-                        // SmartThings returns temperature in Celsius, convert to Fahrenheit
-                        const tempCelsius = mainComponent.thermostatHeatingSetpoint.heatingSetpoint.value;
-                        updates.targetTemperature = Math.round((tempCelsius * 9/5) + 32);
+                        const setpointData = mainComponent.thermostatHeatingSetpoint.heatingSetpoint;
+                        const setpointValue = setpointData.value;
+                        const setpointUnit = (setpointData as any).unit || 'C';
+                        
+                        if (setpointUnit === 'F') {
+                            updates.targetTemperature = Math.round(setpointValue);
+                        } else {
+                            updates.targetTemperature = Math.round((setpointValue * 9/5) + 32);
+                        }
+                        console.log(`DEBUG: Heating setpoint: ${setpointValue}°${setpointUnit} → ${updates.targetTemperature}°F`);
                     } else if (mainComponent.thermostatCoolingSetpoint?.coolingSetpoint) {
-                        // SmartThings returns temperature in Celsius, convert to Fahrenheit
-                        const tempCelsius = mainComponent.thermostatCoolingSetpoint.coolingSetpoint.value;
-                        updates.targetTemperature = Math.round((tempCelsius * 9/5) + 32);
+                        const setpointData = mainComponent.thermostatCoolingSetpoint.coolingSetpoint;
+                        const setpointValue = setpointData.value;
+                        const setpointUnit = (setpointData as any).unit || 'C';
+                        
+                        if (setpointUnit === 'F') {
+                            updates.targetTemperature = Math.round(setpointValue);
+                        } else {
+                            updates.targetTemperature = Math.round((setpointValue * 9/5) + 32);
+                        }
+                        console.log(`DEBUG: Cooling setpoint: ${setpointValue}°${setpointUnit} → ${updates.targetTemperature}°F`);
                     }
 
                     if (mainComponent.thermostat?.thermostatMode) {
@@ -335,17 +368,24 @@ export class HeatPumpCoordinator {
                 });
             }
 
-            // Set device temperature based on mode and HomeKit setpoints
+            // Smart temperature coordination - respect manual overrides within range
             const activeSchedule = this.config.stateManager.getActiveSchedule();
             const heatingSetpoint = activeSchedule?.targetMinTemp || state.globalMinTemp; // Low setpoint from HomeKit
             const coolingSetpoint = activeSchedule?.targetMaxTemp || state.globalMaxTemp; // High setpoint from HomeKit
+            
+            // Check if we should respect manual temperature override
+            if (this.config.stateManager.shouldRespectManualOverride(unit)) {
+                console.log(`🎛️  Respecting manual temperature override for ${unit.name}: ${unit.targetTemperature}°F (within range: ${heatingSetpoint}°F-${coolingSetpoint}°F)`);
+                continue; // Skip temperature adjustment for this unit
+            }
+
             let targetTemp: number;
 
             if (systemMode === 'heat') {
-                // Heating mode: Set all devices to heating setpoint (low setpoint)
+                // Heating mode: Set devices to heating setpoint (low setpoint)
                 targetTemp = heatingSetpoint;
             } else if (systemMode === 'cool') {
-                // Cooling mode: Set all devices to cooling setpoint (high setpoint)
+                // Cooling mode: Set devices to cooling setpoint (high setpoint)  
                 targetTemp = coolingSetpoint;
             } else {
                 // Off mode or fallback: keep current temperature
@@ -385,6 +425,13 @@ export class HeatPumpCoordinator {
                         break;
                     case 'setTemperature':
                         await this.config.deviceManager.setThermostatTemperature(action.deviceId, action.value);
+                        // Record this coordinator action for accurate manual detection
+                        this.config.stateManager.recordCoordinatorTemperatureSet(action.deviceId, action.value);
+                        // Update our state to reflect this coordinator-initiated change (not manual)
+                        this.config.stateManager.updateMiniSplitState(action.deviceId, {
+                            targetTemperature: action.value,
+                            manualTemperatureOverride: false // Mark as coordinator-initiated
+                        });
                         break;
                     default:
                         console.warn(`Unknown action: ${action.action}`);
@@ -476,6 +523,12 @@ export class HeatPumpCoordinator {
         const state = this.config.stateManager.getSystemState();
         
         for (const unit of onlineUnits) {
+            // Check if we should respect manual temperature override
+            if (this.config.stateManager.shouldRespectManualOverride(unit)) {
+                console.log(`🎛️  Respecting manual temperature override for ${unit.name}: ${unit.targetTemperature}°F (within new range: ${minTemp}°F-${maxTemp}°F)`);
+                continue; // Skip temperature adjustment for this unit
+            }
+
             const systemMode = state.globalMode;
             let targetTemp: number;
             
@@ -570,5 +623,37 @@ export class HeatPumpCoordinator {
 
     public getLightingRecentEvents(count: number = 20) {
         return this.config.lightingMonitor.getRecentEvents(count);
+    }
+
+    // Manual temperature override management methods
+    public getManualOverrideStatus() {
+        const devicesWithOverrides = this.config.stateManager.getDevicesWithManualOverrides();
+        return {
+            totalDevices: this.config.deviceIds.length,
+            devicesWithManualOverrides: devicesWithOverrides.length,
+            overrides: devicesWithOverrides.map(device => ({
+                deviceId: device.deviceId,
+                name: device.name,
+                targetTemperature: device.targetTemperature,
+                lastManualChange: device.lastManualTemperatureChange ? new Date(device.lastManualTemperatureChange) : null,
+                withinGlobalRange: this.config.stateManager.isTemperatureWithinGlobalRange(device.targetTemperature)
+            }))
+        };
+    }
+
+    public async clearManualOverride(deviceId: string): Promise<void> {
+        console.log(`Manually clearing temperature override for device ${deviceId}`);
+        this.config.stateManager.clearManualTemperatureOverride(deviceId);
+        
+        // Trigger a coordination cycle to apply the global setpoints
+        await this.runCoordinationCycle();
+    }
+
+    public async clearAllManualOverrides(): Promise<void> {
+        console.log('Manually clearing all temperature overrides');
+        this.config.stateManager.clearAllManualTemperatureOverrides();
+        
+        // Trigger a coordination cycle to apply the global setpoints
+        await this.runCoordinationCycle();
     }
 }

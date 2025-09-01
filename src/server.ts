@@ -36,9 +36,12 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
     let stateUpdateTimer: NodeJS.Timeout | null = null;
 
     if (coordinator) {
-        // Create a single coordinated thermostat (Off/Auto modes only)
+        // Create a single coordinated thermostat (Off/Heat/Cool/Auto modes)
         const coordinatedThermostat = await server.add(ThermostatDevice.with(
-            ThermostatServer.with("AutoMode")
+            ThermostatServer.with("AutoMode", "Heating", "Cooling").set({
+                controlSequenceOfOperation: 4, // Heat+Cool with setpoint overlap
+                minSetpointDeadBand: 25, // 2.5°C minimum differential
+            })
         ), {
             id: "coordinated-thermostat",
         });
@@ -59,10 +62,6 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
             console.log(`Initial thermostat setup - Average temperature: ${avgCurrentTemp}°F`);
             
             try {
-                // Set thermostat configuration for Off/Auto mode operation
-                thermostatBehavior.state.controlSequenceOfOperation = 4; // Heat+Cool with setpoint overlap  
-                thermostatBehavior.state.minSetpointDeadBand = 25; // 2.5°C minimum differential
-                
                 // Set initial state values
                 const tempCelsius = (avgCurrentTemp - 32) * 5 / 9;
                 thermostatBehavior.state.localTemperature = Math.round(tempCelsius * 100); // Convert °F to °C * 100
@@ -70,12 +69,13 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                 thermostatBehavior.state.occupiedHeatingSetpoint = Math.round(((status.globalRange.min - 32) * 5 / 9) * 100);
                 thermostatBehavior.state.occupiedCoolingSetpoint = Math.round(((status.globalRange.max - 32) * 5 / 9) * 100);
                 
-                // Map system mode for HomeKit (Off/Auto only)
-                // Off = 0, Auto = 1 (Auto will determine heat/cool based on conditions)
+                // Map system mode for HomeKit (Off/Heat/Cool/Auto modes)
+                // Off = 0, Heat = 1, Cool = 2, Auto = 3
                 const modeMapping: {[key: string]: number} = {
                     'off': 0,   // Off mode
-                    'heat': 1,  // Auto mode (system in heating)
-                    'cool': 1,  // Auto mode (system in cooling)
+                    'heat': 1,  // Heat mode
+                    'cool': 2,  // Cool mode
+                    'auto': 3,  // Auto mode (let thermostat decide)
                 };
                 thermostatBehavior.state.systemMode = modeMapping[status.globalMode] || 0;
             } catch (error) {
@@ -100,11 +100,12 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                     thermostatBehavior.state.occupiedHeatingSetpoint = Math.round(((status.globalRange.min - 32) * 5 / 9) * 100);
                     thermostatBehavior.state.occupiedCoolingSetpoint = Math.round(((status.globalRange.max - 32) * 5 / 9) * 100);
                     
-                    // Map system mode for HomeKit (Off/Auto only)
+                    // Map system mode for HomeKit (Off/Heat/Cool/Auto modes)
                     const modeMapping: {[key: string]: number} = {
                         'off': 0,   // Off mode
-                        'heat': 1,  // Auto mode (system in heating)
-                        'cool': 1,  // Auto mode (system in cooling)
+                        'heat': 1,  // Heat mode
+                        'cool': 2,  // Cool mode
+                        'auto': 3,  // Auto mode (let thermostat decide)
                     };
                     thermostatBehavior.state.systemMode = modeMapping[status.globalMode] || 0;
                 } catch (error) {
@@ -144,7 +145,7 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                 }
             });
 
-            // Handle system mode changes (Off/Auto only)
+            // Handle system mode changes (Off/Heat/Cool/Auto modes)
             thermostatBehavior.events.systemMode$Changed.on(async (value: any) => {
                 console.log(`HomeKit thermostat mode changed: ${value}`);
                 try {
@@ -153,6 +154,14 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
                         await coordinator.setGlobalMode('off', 'homekit_control');
                         console.log('HomeKit Off mode - turned off all devices immediately');
                     } else if (value === 1) {
+                        // Heat mode - set all devices to heat mode
+                        await coordinator.setGlobalMode('heat', 'homekit_control');
+                        console.log('HomeKit Heat mode - set all devices to heat mode');
+                    } else if (value === 2) {
+                        // Cool mode - set all devices to cool mode
+                        await coordinator.setGlobalMode('cool', 'homekit_control');
+                        console.log('HomeKit Cool mode - set all devices to cool mode');
+                    } else if (value === 3) {
                         // Auto mode - let coordinator determine heat/cool based on conditions
                         console.log('HomeKit Auto mode - triggering coordination cycle to determine optimal mode');
                         await coordinator.runCoordinationCycle();
