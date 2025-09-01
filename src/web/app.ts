@@ -2,6 +2,7 @@ import express from 'express';
 import session from 'express-session';
 import path from 'path';
 import expressLayouts from 'express-ejs-layouts';
+import cors from 'cors';
 import { promises as fs } from 'fs';
 import { config } from '../config';
 import { SmartThingsOAuth, TokenStore } from '../smartthings/oauth';
@@ -10,6 +11,7 @@ import { MatterSmartApp } from '../smartthings/smartapp';
 import { HeatPumpCoordinator } from '../coordinator/heat-pump-coordinator';
 import { createAuthRoutes } from './routes/auth';
 import { createAdminRoutes } from './routes/admin';
+import { createApiRoutes } from './routes/api';
 
 declare module 'express-session' {
     interface SessionData {
@@ -38,17 +40,34 @@ export class AdminServer {
     }
 
     private setupMiddleware() {
+        // Enable CORS for React development
+        this.app.use(cors({
+            origin: ['http://localhost:5173', 'http://localhost:3000'],
+            credentials: true
+        }));
+        
+        // IMPORTANT: JSON and URL-encoded middleware MUST come before expressLayouts
+        this.app.use(express.json());
+        this.app.use(express.urlencoded({ extended: true }));
+        
         this.app.set('view engine', 'ejs');
         this.app.set('views', path.join(__dirname, '../../views'));
         
-        // Configure express-ejs-layouts
+        // Middleware to skip express-ejs-layouts for API routes
+        this.app.use((req, res, next) => {
+            if (req.path.startsWith('/api/')) {
+                // Skip layouts for API routes
+                res.locals.layout = false;
+            }
+            next();
+        });
+        
+        // Configure express-ejs-layouts AFTER body parsers
         this.app.use(expressLayouts);
         this.app.set('layout', 'layout');
-        this.app.set('layout extractScripts', true);
+        this.app.set('layout extractScripts', false); // Disable script extraction to avoid syntax errors
         this.app.set('layout extractStyles', true);
         
-        this.app.use(express.json());
-        this.app.use(express.urlencoded({ extended: true }));
         this.app.use(express.static(path.join(__dirname, '../../public')));
         
         this.app.use(session({
@@ -63,6 +82,34 @@ export class AdminServer {
     }
 
     private setupRoutes() {
+        // Test direct API route
+        const directRoute = this.app.get('/api/direct-test', (req, res) => {
+            console.log('Direct test route hit');
+            res.json({ message: 'Direct API test works' });
+        });
+        console.log('Direct route registered:', !!directRoute);
+        
+        // Register API routes FIRST (before any view-rendering middleware affects them)
+        const apiRouter = createApiRoutes(this.deviceManager);
+        console.log('Registering API routes at /api with', apiRouter.stack?.length, 'routes');
+        this.app.use('/api', apiRouter);
+        
+        // Debug: List all registered routes
+        console.log('All app routes after API registration:');
+        const router = (this.app as any)._router;
+        if (router && router.stack) {
+            router.stack.forEach((layer: any) => {
+                if (layer.route) {
+                    console.log('  Route:', layer.route.path, Object.keys(layer.route.methods));
+                } else if (layer.name === 'router') {
+                    console.log('  Router middleware at:', layer.regexp);
+                }
+            });
+        } else {
+            console.log('  No router stack found');
+        }
+        
+        // Then register other routes
         this.app.get('/', (req, res) => {
             res.redirect('/auth/login');
         });
@@ -131,6 +178,11 @@ export class AdminServer {
         });
 
         this.app.use((req, res) => {
+            // Return JSON for API routes
+            if (req.path.startsWith('/api/')) {
+                return res.status(404).json({ error: 'API endpoint not found' });
+            }
+            
             res.status(404).render('error', {
                 title: 'Page Not Found',
                 currentPage: '',
