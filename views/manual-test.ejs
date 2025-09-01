@@ -1,0 +1,832 @@
+<style>
+    .warning-banner {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #856404;
+    }
+
+    .test-device-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+        gap: 25px;
+        margin-top: 25px;
+    }
+    
+    .test-device-card {
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .test-device-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        border-color: #667eea;
+    }
+    
+    .test-device-card.executing {
+        border-color: #ffc107;
+        background: #fffbf0;
+    }
+    
+    .test-device-card.success {
+        border-color: #28a745;
+        background: #f8fff9;
+    }
+    
+    .test-device-card.error {
+        border-color: #dc3545;
+        background: #fff8f8;
+    }
+    
+    .device-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .device-title {
+        font-size: 1.3em;
+        font-weight: 700;
+        color: #333;
+        margin: 0;
+    }
+    
+    .device-subtitle {
+        font-size: 0.9em;
+        color: #666;
+        margin: 5px 0 0 0;
+    }
+    
+    .device-status {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 5px;
+    }
+    
+    .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+        text-align: center;
+        min-width: 70px;
+    }
+    
+    .status-online {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-offline {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .current-temp {
+        font-size: 2.2em;
+        font-weight: bold;
+        color: #667eea;
+        text-align: center;
+        margin: 15px 0;
+        padding: 10px;
+        background: white;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+    }
+    
+    .control-section {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        border: 1px solid #e9ecef;
+    }
+    
+    .control-title {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #333;
+        margin: 0 0 15px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .control-row {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 10px 0;
+    }
+    
+    .control-label {
+        font-weight: 500;
+        color: #555;
+        min-width: 80px;
+    }
+    
+    .power-toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px;
+    }
+    
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 26px;
+    }
+    
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+        background-color: #28a745;
+    }
+    
+    input:checked + .slider:before {
+        transform: translateX(24px);
+    }
+    
+    .mode-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .mode-btn {
+        padding: 8px 16px;
+        border: 2px solid #667eea;
+        background: white;
+        color: #667eea;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        flex: 1;
+        min-width: 80px;
+        text-align: center;
+    }
+    
+    .mode-btn:hover {
+        background: #667eea;
+        color: white;
+        transform: translateY(-1px);
+    }
+    
+    .mode-btn.active {
+        background: #667eea;
+        color: white;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .temp-control {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .temp-slider {
+        flex: 1;
+        height: 8px;
+        border-radius: 4px;
+        background: #ddd;
+        outline: none;
+        -webkit-appearance: none;
+    }
+    
+    .temp-slider::-webkit-slider-thumb {
+        appearance: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #667eea;
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    
+    .temp-display {
+        font-size: 1.4em;
+        font-weight: bold;
+        color: #667eea;
+        min-width: 60px;
+        text-align: center;
+        background: #f8f9fa;
+        padding: 5px 10px;
+        border-radius: 6px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .temp-presets {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .preset-btn {
+        padding: 6px 12px;
+        border: 1px solid #6c757d;
+        background: white;
+        color: #6c757d;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: all 0.2s;
+    }
+    
+    .preset-btn:hover {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .execute-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s;
+        width: 100%;
+        font-size: 1em;
+    }
+    
+    .execute-btn:hover {
+        background: #218838;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .execute-btn:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .custom-command {
+        margin-top: 15px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .command-inputs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .command-input {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 0.9em;
+    }
+    
+    .args-input {
+        grid-column: 1 / -1;
+    }
+    
+    .execute-custom-btn {
+        background: #6f42c1;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+        width: 100%;
+    }
+    
+    .execute-custom-btn:hover {
+        background: #5a359a;
+    }
+    
+    .status-message {
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 500;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .status-message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .status-message.loading {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .refresh-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .auto-refresh {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9em;
+        color: #666;
+    }
+    
+    .refresh-btn {
+        background: #17a2b8;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .refresh-btn:hover {
+        background: #138496;
+    }
+
+    .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 2px solid #667eea;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<div class="warning-banner">
+    <span style="font-size: 1.5em;">⚠️</span>
+    <div>
+        <strong>Manual Testing Mode</strong><br>
+        This interface bypasses the Heat Pump Coordinator. Commands executed here will directly control individual devices and may conflict with coordinated operations.
+    </div>
+</div>
+
+<div class="refresh-controls">
+    <h1 class="page-title" style="margin: 0;">
+        <span class="icon">🔧</span>
+        Manual Device Testing
+    </h1>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div class="auto-refresh">
+            <input type="checkbox" id="auto-refresh" checked>
+            <label for="auto-refresh">Auto-refresh (5s)</label>
+        </div>
+        <button class="refresh-btn" onclick="refreshAllDevices()">
+            <span id="refresh-icon">🔄</span> Refresh All
+        </button>
+    </div>
+</div>
+
+<div id="devices-container">
+    <div class="text-center" style="padding: 40px;">
+        <div class="loading-spinner" style="width: 32px; height: 32px; margin: 0 auto 15px;"></div>
+        <p>Loading mini-split devices...</p>
+    </div>
+</div>
+
+<script>
+let autoRefreshInterval = null;
+let devices = [];
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => {
+    loadDevices();
+    setupAutoRefresh();
+});
+
+// Auto-refresh toggle
+function setupAutoRefresh() {
+    const checkbox = document.getElementById('auto-refresh');
+    checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+    });
+    
+    if (checkbox.checked) {
+        startAutoRefresh();
+    }
+}
+
+function startAutoRefresh() {
+    stopAutoRefresh();
+    autoRefreshInterval = setInterval(() => {
+        refreshAllDevices(true);
+    }, 5000);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+}
+
+// Load devices
+async function loadDevices() {
+    try {
+        const response = await fetch('/admin/manual-test/devices');
+        if (!response.ok) {
+            throw new Error('Failed to load devices');
+        }
+        
+        devices = await response.json();
+        renderDevices();
+    } catch (error) {
+        console.error('Error loading devices:', error);
+        document.getElementById('devices-container').innerHTML = `
+            <div class="alert alert-danger text-center">
+                <h4>❌ Error Loading Devices</h4>
+                <p>Failed to load mini-split devices: ${error.message}</p>
+                <button class="btn btn-primary" onclick="loadDevices()">Retry</button>
+            </div>
+        `;
+    }
+}
+
+// Render devices
+function renderDevices() {
+    if (!devices || devices.length === 0) {
+        document.getElementById('devices-container').innerHTML = `
+            <div class="alert alert-warning text-center">
+                <h4>⚠️ No Mini-Split Devices Found</h4>
+                <p>No configured mini-split devices were found. Check your coordinator configuration.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const container = document.getElementById('devices-container');
+    container.innerHTML = `
+        <div class="test-device-grid">
+            ${devices.map(device => renderDeviceCard(device)).join('')}
+        </div>
+    `;
+    
+    // Initialize device states
+    devices.forEach(device => {
+        updateDeviceUI(device.deviceId, device.status);
+    });
+}
+
+// Render individual device card
+function renderDeviceCard(device) {
+    return `
+        <div class="test-device-card" id="card-${device.deviceId}">
+            <div class="device-header">
+                <div>
+                    <h3 class="device-title">${device.name}</h3>
+                    <p class="device-subtitle">${device.room} • ${device.deviceId}</p>
+                </div>
+                <div class="device-status">
+                    <div class="status-badge ${device.isOnline ? 'status-online' : 'status-offline'}" id="status-${device.deviceId}">
+                        ${device.isOnline ? '🟢 Online' : '🔴 Offline'}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="current-temp" id="temp-${device.deviceId}">
+                --°F
+            </div>
+            
+            <!-- Power Control -->
+            <div class="control-section">
+                <h4 class="control-title">🔌 Power Control</h4>
+                <div class="control-row">
+                    <span class="control-label">Power:</span>
+                    <div class="power-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="power-${device.deviceId}" onchange="setPower('${device.deviceId}')">
+                            <span class="slider"></span>
+                        </label>
+                        <span id="power-state-${device.deviceId}">Unknown</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mode Control -->
+            <div class="control-section">
+                <h4 class="control-title">🌡️ Mode Control</h4>
+                <div class="mode-buttons" id="modes-${device.deviceId}">
+                    <button class="mode-btn" data-mode="off" onclick="setMode('${device.deviceId}', 'off')">Off</button>
+                    <button class="mode-btn" data-mode="heat" onclick="setMode('${device.deviceId}', 'heat')">Heat</button>
+                    <button class="mode-btn" data-mode="cool" onclick="setMode('${device.deviceId}', 'cool')">Cool</button>
+                </div>
+            </div>
+            
+            <!-- Temperature Control -->
+            <div class="control-section">
+                <h4 class="control-title">🌡️ Temperature Control</h4>
+                <div class="temp-control">
+                    <span class="control-label">Target:</span>
+                    <input type="range" class="temp-slider" id="temp-slider-${device.deviceId}" 
+                           min="40" max="90" value="72" 
+                           oninput="updateTempDisplay('${device.deviceId}')" 
+                           onchange="setTemperature('${device.deviceId}')">
+                    <div class="temp-display" id="temp-display-${device.deviceId}">72°F</div>
+                </div>
+                <div class="temp-presets">
+                    <button class="preset-btn" onclick="setPresetTemp('${device.deviceId}', 60)">60°</button>
+                    <button class="preset-btn" onclick="setPresetTemp('${device.deviceId}', 65)">65°</button>
+                    <button class="preset-btn" onclick="setPresetTemp('${device.deviceId}', 70)">70°</button>
+                    <button class="preset-btn" onclick="setPresetTemp('${device.deviceId}', 75)">75°</button>
+                    <button class="preset-btn" onclick="setPresetTemp('${device.deviceId}', 80)">80°</button>
+                </div>
+            </div>
+            
+            <!-- Custom Command -->
+            <div class="control-section">
+                <h4 class="control-title">⚡ Custom Command</h4>
+                <div class="custom-command">
+                    <div class="command-inputs">
+                        <input type="text" class="command-input" id="capability-${device.deviceId}" 
+                               placeholder="Capability (e.g., switch)" value="switch">
+                        <input type="text" class="command-input" id="command-${device.deviceId}" 
+                               placeholder="Command (e.g., on)" value="on">
+                        <input type="text" class="command-input args-input" id="args-${device.deviceId}" 
+                               placeholder="Arguments (JSON array, e.g., [75] or leave empty)">
+                    </div>
+                    <button class="execute-custom-btn" onclick="executeCustomCommand('${device.deviceId}')">
+                        Execute Custom Command
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Status Messages -->
+            <div id="status-${device.deviceId}-msg" class="status-message" style="display: none;"></div>
+        </div>
+    `;
+}
+
+// Update device UI with current status
+function updateDeviceUI(deviceId, status) {
+    if (!status || !status.components || !status.components.main) {
+        return;
+    }
+    
+    const main = status.components.main;
+    
+    // Update temperature
+    if (main.temperatureMeasurement && main.temperatureMeasurement.temperature) {
+        const temp = main.temperatureMeasurement.temperature.value;
+        const unit = main.temperatureMeasurement.temperature.unit || 'F';
+        document.getElementById(`temp-${deviceId}`).textContent = `${temp}°${unit}`;
+    }
+    
+    // Update power state
+    if (main.switch && main.switch.switch) {
+        const powerState = main.switch.switch.value;
+        const powerToggle = document.getElementById(`power-${deviceId}`);
+        const powerStateLabel = document.getElementById(`power-state-${deviceId}`);
+        
+        powerToggle.checked = powerState === 'on';
+        powerStateLabel.textContent = powerState === 'on' ? 'ON' : 'OFF';
+        powerStateLabel.style.color = powerState === 'on' ? '#28a745' : '#dc3545';
+    }
+    
+    // Update mode
+    if (main.thermostat && main.thermostat.thermostatMode) {
+        const mode = main.thermostat.thermostatMode.value;
+        const modeButtons = document.querySelectorAll(`#modes-${deviceId} .mode-btn`);
+        modeButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+    }
+    
+    // Update target temperature
+    if (main.thermostatCoolingSetpoint && main.thermostatCoolingSetpoint.coolingSetpoint) {
+        const targetTemp = Math.round(main.thermostatCoolingSetpoint.coolingSetpoint.value);
+        document.getElementById(`temp-slider-${deviceId}`).value = targetTemp;
+        document.getElementById(`temp-display-${deviceId}`).textContent = `${targetTemp}°F`;
+    } else if (main.thermostatHeatingSetpoint && main.thermostatHeatingSetpoint.heatingSetpoint) {
+        const targetTemp = Math.round(main.thermostatHeatingSetpoint.heatingSetpoint.value);
+        document.getElementById(`temp-slider-${deviceId}`).value = targetTemp;
+        document.getElementById(`temp-display-${deviceId}`).textContent = `${targetTemp}°F`;
+    }
+}
+
+// Device control functions
+async function setPower(deviceId) {
+    const toggle = document.getElementById(`power-${deviceId}`);
+    const state = toggle.checked ? 'on' : 'off';
+    
+    await executeCommand(deviceId, `/admin/manual-test/${deviceId}/power`, { state }, 
+        `Power ${state.toUpperCase()}`);
+}
+
+async function setMode(deviceId, mode) {
+    await executeCommand(deviceId, `/admin/manual-test/${deviceId}/mode`, { mode }, 
+        `Mode: ${mode.toUpperCase()}`);
+}
+
+function updateTempDisplay(deviceId) {
+    const slider = document.getElementById(`temp-slider-${deviceId}`);
+    const display = document.getElementById(`temp-display-${deviceId}`);
+    display.textContent = `${slider.value}°F`;
+}
+
+async function setTemperature(deviceId) {
+    const slider = document.getElementById(`temp-slider-${deviceId}`);
+    const temperature = parseInt(slider.value);
+    
+    await executeCommand(deviceId, `/admin/manual-test/${deviceId}/temperature`, 
+        { temperature }, `Temperature: ${temperature}°F`);
+}
+
+function setPresetTemp(deviceId, temp) {
+    const slider = document.getElementById(`temp-slider-${deviceId}`);
+    slider.value = temp;
+    updateTempDisplay(deviceId);
+    setTemperature(deviceId);
+}
+
+async function executeCustomCommand(deviceId) {
+    const capability = document.getElementById(`capability-${deviceId}`).value;
+    const command = document.getElementById(`command-${deviceId}`).value;
+    const argsText = document.getElementById(`args-${deviceId}`).value;
+    
+    if (!capability || !command) {
+        showStatus(deviceId, 'Capability and command are required', 'error');
+        return;
+    }
+    
+    let args = [];
+    if (argsText.trim()) {
+        try {
+            args = JSON.parse(argsText);
+            if (!Array.isArray(args)) {
+                throw new Error('Arguments must be an array');
+            }
+        } catch (error) {
+            showStatus(deviceId, `Invalid arguments format: ${error.message}`, 'error');
+            return;
+        }
+    }
+    
+    await executeCommand(deviceId, `/admin/manual-test/${deviceId}/command`, 
+        { capability, command, arguments: args }, 
+        `${capability}.${command}(${JSON.stringify(args)})`);
+}
+
+// Generic command executor
+async function executeCommand(deviceId, url, data, description) {
+    const card = document.getElementById(`card-${deviceId}`);
+    
+    try {
+        showStatus(deviceId, `Executing: ${description}...`, 'loading');
+        card.classList.add('executing');
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            showStatus(deviceId, `✅ Success: ${description}`, 'success');
+            card.classList.remove('executing');
+            card.classList.add('success');
+            setTimeout(() => card.classList.remove('success'), 2000);
+            
+            // Refresh device status after successful command
+            setTimeout(() => refreshDevice(deviceId), 1000);
+        } else {
+            const error = await response.text();
+            throw new Error(error || 'Unknown error');
+        }
+    } catch (error) {
+        showStatus(deviceId, `❌ Error: ${error.message}`, 'error');
+        card.classList.remove('executing');
+        card.classList.add('error');
+        setTimeout(() => card.classList.remove('error'), 3000);
+        console.error('Command execution error:', error);
+    }
+}
+
+// Status message handling
+function showStatus(deviceId, message, type) {
+    const statusDiv = document.getElementById(`status-${deviceId}-msg`);
+    statusDiv.textContent = message;
+    statusDiv.className = `status-message ${type}`;
+    statusDiv.style.display = 'block';
+    
+    if (type !== 'loading') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+// Refresh functions
+async function refreshDevice(deviceId) {
+    try {
+        const response = await fetch(`/admin/device/${deviceId}/status`);
+        if (response.ok) {
+            const status = await response.json();
+            updateDeviceUI(deviceId, status);
+        }
+    } catch (error) {
+        console.error(`Error refreshing device ${deviceId}:`, error);
+    }
+}
+
+async function refreshAllDevices(silent = false) {
+    const refreshBtn = document.querySelector('.refresh-btn');
+    const refreshIcon = document.getElementById('refresh-icon');
+    
+    if (!silent) {
+        refreshBtn.disabled = true;
+        refreshIcon.innerHTML = '<span class="loading-spinner"></span>';
+    }
+    
+    try {
+        // Refresh device list and status
+        await loadDevices();
+    } finally {
+        if (!silent) {
+            refreshBtn.disabled = false;
+            refreshIcon.textContent = '🔄';
+        }
+    }
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    stopAutoRefresh();
+});
+</script>

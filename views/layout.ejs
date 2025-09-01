@@ -238,6 +238,12 @@
                             <span class="nav-text">Heat Pump</span>
                         </a>
                     </li>
+                    <li class="nav-tab <%= (typeof currentPage !== 'undefined' && currentPage === 'manual-test') ? 'active' : '' %>">
+                        <a href="/admin/manual-test">
+                            <span class="icon">🔧</span>
+                            <span class="nav-text">Manual Test</span>
+                        </a>
+                    </li>
                     <% } %>
                     <li class="nav-tab <%= (typeof currentPage !== 'undefined' && currentPage === 'matter') ? 'active' : '' %>">
                         <a href="/matter/setup">
