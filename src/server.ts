@@ -117,61 +117,138 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
         }
 
         if (thermostatBehavior && bridge) {
-            // Handle heating setpoint changes (represents the min temp of the range)
-            thermostatBehavior.events.heatingSetpoint$Changed.on(async (value: any) => {
-                console.log(`Coordinated thermostat heating setpoint changed: ${value}`);
-                try {
-                    const currentRange = coordinator.getCoordinatorStatus().globalRange;
-                    const newMinTemp = Math.round(((value - 32) * 5 / 9) * 10) / 10; // Convert and round
-                    const newMinTempF = Math.round((newMinTemp * 9/5) + 32);
-                    await coordinator.setGlobalTemperatureRangeImmediate(newMinTempF, currentRange.max);
-                    console.log('Applied heating setpoint change immediately to devices');
-                } catch (error) {
-                    console.error('Error updating coordinated heating setpoint:', error);
+            try {
+                // Handle heating setpoint changes (represents the min temp of the range)
+                if (thermostatBehavior.events.occupiedHeatingSetpoint$Changed) {
+                    thermostatBehavior.events.occupiedHeatingSetpoint$Changed.on(async (value: any) => {
+                        console.log(`🔥 Coordinated thermostat heating setpoint changed: ${value} (Matter units)`);
+                        try {
+                            const currentRange = coordinator.getCoordinatorStatus().globalRange;
+                            // Convert from Matter units (°C * 100) to Fahrenheit
+                            const tempC = value / 100;
+                            const newMinTempF = Math.round((tempC * 9/5) + 32);
+                            await coordinator.setGlobalTemperatureRangeImmediate(newMinTempF, currentRange.max);
+                            console.log(`🎯 Applied heating setpoint change: ${newMinTempF}°F to all devices`);
+                        } catch (error) {
+                            console.error('Error updating coordinated heating setpoint:', error);
+                        }
+                    });
                 }
-            });
 
-            // Handle cooling setpoint changes (represents the max temp of the range)
-            thermostatBehavior.events.coolingSetpoint$Changed.on(async (value: any) => {
-                console.log(`Coordinated thermostat cooling setpoint changed: ${value}`);
-                try {
-                    const currentRange = coordinator.getCoordinatorStatus().globalRange;
-                    const newMaxTemp = Math.round(((value - 32) * 5 / 9) * 10) / 10; // Convert and round
-                    const newMaxTempF = Math.round((newMaxTemp * 9/5) + 32);
-                    await coordinator.setGlobalTemperatureRangeImmediate(currentRange.min, newMaxTempF);
-                    console.log('Applied cooling setpoint change immediately to devices');
-                } catch (error) {
-                    console.error('Error updating coordinated cooling setpoint:', error);
+                // Handle cooling setpoint changes (represents the max temp of the range)
+                if (thermostatBehavior.events.occupiedCoolingSetpoint$Changed) {
+                    thermostatBehavior.events.occupiedCoolingSetpoint$Changed.on(async (value: any) => {
+                        console.log(`❄️  Coordinated thermostat cooling setpoint changed: ${value} (Matter units)`);
+                        try {
+                            const currentRange = coordinator.getCoordinatorStatus().globalRange;
+                            // Convert from Matter units (°C * 100) to Fahrenheit
+                            const tempC = value / 100;
+                            const newMaxTempF = Math.round((tempC * 9/5) + 32);
+                            await coordinator.setGlobalTemperatureRangeImmediate(currentRange.min, newMaxTempF);
+                            console.log(`🎯 Applied cooling setpoint change: ${newMaxTempF}°F to all devices`);
+                        } catch (error) {
+                            console.error('Error updating coordinated cooling setpoint:', error);
+                        }
+                    });
                 }
-            });
 
-            // Handle system mode changes (Off/Heat/Cool/Auto modes)
-            thermostatBehavior.events.systemMode$Changed.on(async (value: any) => {
-                console.log(`HomeKit thermostat mode changed: ${value}`);
-                try {
-                    if (value === 0) {
-                        // Off mode - turn off all devices
-                        await coordinator.setGlobalMode('off', 'homekit_control');
-                        console.log('HomeKit Off mode - turned off all devices immediately');
-                    } else if (value === 1) {
-                        // Heat mode - set all devices to heat mode
-                        await coordinator.setGlobalMode('heat', 'homekit_control');
-                        console.log('HomeKit Heat mode - set all devices to heat mode');
-                    } else if (value === 2) {
-                        // Cool mode - set all devices to cool mode
-                        await coordinator.setGlobalMode('cool', 'homekit_control');
-                        console.log('HomeKit Cool mode - set all devices to cool mode');
-                    } else if (value === 3) {
-                        // Auto mode - let coordinator determine heat/cool based on conditions
-                        console.log('HomeKit Auto mode - triggering coordination cycle to determine optimal mode');
-                        await coordinator.runCoordinationCycle();
-                    } else {
-                        console.log(`Unexpected HomeKit mode value: ${value}, ignoring`);
-                    }
-                } catch (error) {
-                    console.error('Error updating coordinated mode:', error);
+                // Handle system mode changes (Off/Heat/Cool/Auto modes)
+                if (thermostatBehavior.events.systemMode$Changed) {
+                    thermostatBehavior.events.systemMode$Changed.on(async (value: any) => {
+                        console.log(`🏠 HomeKit thermostat mode changed: ${value}`);
+                        try {
+                            if (value === 0) {
+                                // Off mode - turn off all devices
+                                await coordinator.setGlobalMode('off', 'homekit_control');
+                                console.log('🔴 HomeKit Off mode - turned off all devices immediately');
+                            } else if (value === 1) {
+                                // Heat mode - set all devices to heat mode
+                                await coordinator.setGlobalMode('heat', 'homekit_control');
+                                console.log('🔥 HomeKit Heat mode - set all devices to heat mode');
+                            } else if (value === 2) {
+                                // Cool mode - set all devices to cool mode
+                                await coordinator.setGlobalMode('cool', 'homekit_control');
+                                console.log('❄️  HomeKit Cool mode - set all devices to cool mode');
+                            } else if (value === 3) {
+                                // Auto mode - let coordinator determine heat/cool based on conditions
+                                console.log('🤖 HomeKit Auto mode - triggering coordination cycle to determine optimal mode');
+                                await coordinator.runCoordinationCycle();
+                            } else {
+                                console.log(`⚠️ Unexpected HomeKit mode value: ${value}, ignoring`);
+                            }
+                        } catch (error) {
+                            console.error('Error updating coordinated mode:', error);
+                        }
+                    });
                 }
-            });
+                
+                console.log('✅ HomeKit event handlers attached successfully');
+            } catch (error) {
+                console.error('❌ Error setting up HomeKit event handlers:', error);
+                
+                // Fallback: Try alternate event listener approach
+                try {
+                    console.log('🔧 Trying alternate event listener setup...');
+                    
+                    // Monitor state changes directly
+                    const monitorStateChanges = setInterval(() => {
+                        try {
+                            const currentHeating = thermostatBehavior.state.occupiedHeatingSetpoint;
+                            const currentCooling = thermostatBehavior.state.occupiedCoolingSetpoint;
+                            const currentMode = thermostatBehavior.state.systemMode;
+                            
+                            // Store previous values on first run
+                            if (!thermostatBehavior._lastValues) {
+                                thermostatBehavior._lastValues = {
+                                    heating: currentHeating,
+                                    cooling: currentCooling,
+                                    mode: currentMode
+                                };
+                                return;
+                            }
+                            
+                            // Check for changes
+                            if (currentHeating !== thermostatBehavior._lastValues.heating) {
+                                console.log(`🔥 Heating setpoint changed via polling: ${currentHeating} (Matter units)`);
+                                const tempC = currentHeating / 100;
+                                const newMinTempF = Math.round((tempC * 9/5) + 32);
+                                coordinator.setGlobalTemperatureRangeImmediate(newMinTempF, coordinator.getCoordinatorStatus().globalRange.max);
+                                thermostatBehavior._lastValues.heating = currentHeating;
+                            }
+                            
+                            if (currentCooling !== thermostatBehavior._lastValues.cooling) {
+                                console.log(`❄️  Cooling setpoint changed via polling: ${currentCooling} (Matter units)`);
+                                const tempC = currentCooling / 100;
+                                const newMaxTempF = Math.round((tempC * 9/5) + 32);
+                                coordinator.setGlobalTemperatureRangeImmediate(coordinator.getCoordinatorStatus().globalRange.min, newMaxTempF);
+                                thermostatBehavior._lastValues.cooling = currentCooling;
+                            }
+                            
+                            if (currentMode !== thermostatBehavior._lastValues.mode) {
+                                console.log(`🏠 Mode changed via polling: ${currentMode}`);
+                                if (currentMode === 0) {
+                                    coordinator.setGlobalMode('off', 'homekit_control');
+                                } else if (currentMode === 1) {
+                                    coordinator.setGlobalMode('heat', 'homekit_control');
+                                } else if (currentMode === 2) {
+                                    coordinator.setGlobalMode('cool', 'homekit_control');
+                                } else if (currentMode === 3) {
+                                    coordinator.runCoordinationCycle();
+                                }
+                                thermostatBehavior._lastValues.mode = currentMode;
+                            }
+                            
+                        } catch (pollError) {
+                            console.error('Error in state polling:', pollError);
+                        }
+                    }, 1000); // Check every second
+                    
+                    console.log('✅ Fallback polling-based change detection active');
+                    
+                } catch (fallbackError) {
+                    console.error('❌ Fallback approach also failed:', fallbackError);
+                }
+            }
         }
 
         await server.start();
@@ -183,24 +260,78 @@ async function createMatterServer(bridge?: SmartThingsMatterBridge, coordinator?
         console.log("  * Cooling SetPoint = Global Max Temperature");
         console.log("  * System Mode = Global System Mode");
         
+        // Check if already commissioned (has fabrics)
+        let isCommissioned = false;
+        try {
+            // Check storage for commissioned fabrics count
+            const fs = await import('fs/promises');
+            const fabricCountFile = './data/matter-storage/heat-pump-controller/root.operationalCredentials.commissionedFabrics';
+            try {
+                const fabricCount = parseInt(await fs.readFile(fabricCountFile, 'utf8'));
+                isCommissioned = fabricCount > 0;
+                console.log(`Matter server fabric status: ${isCommissioned ? 'COMMISSIONED' : 'UNCOMMISSIONED'} (${fabricCount} fabrics)`);
+            } catch (fileError) {
+                // File doesn't exist yet, device is definitely not commissioned
+                console.log('Matter server fabric status: UNCOMMISSIONED (no fabric storage found)');
+                isCommissioned = false;
+            }
+        } catch (error) {
+            console.log('Unable to check fabric status:', error instanceof Error ? error.message : String(error));
+        }
+        
         // Get commissioning information
         let commissioning: { qrCode?: string; manualCode?: string } = {};
+        if (!isCommissioned) {
+            try {
+                commissioning.qrCode = server.state.commissioning.pairingCodes.qrPairingCode;
+                commissioning.manualCode = server.state.commissioning.pairingCodes.manualPairingCode;
+                
+                console.log("\n" + "=".repeat(80));
+                console.log("🏠 HOMEKIT/MATTER COMMISSIONING INFORMATION");
+                console.log("=".repeat(80));
+                console.log(`📱 Add this device to HomeKit by scanning the QR code below:`);
+                console.log(`📋 Manual Code: ${commissioning.manualCode}`);
+                console.log(`🌐 Web Interface: http://localhost:3000/matter/setup`);
+                console.log(`🔗 QR Code:`);
+                console.log(commissioning.qrCode);
+                console.log("=".repeat(80) + "\n");
+            } catch (error) {
+                console.log("Ready for commissioning...");
+                console.log("Visit http://localhost:3000/matter/setup for commissioning information");
+            }
+        } else {
+            console.log("✅ Matter device is already commissioned with HomeKit");
+            console.log("🌐 Web Interface: http://localhost:3000/matter/setup");
+        }
+        
+        // Add file system watcher for fabric changes (commissioning/decommissioning)
         try {
-            commissioning.qrCode = server.state.commissioning.pairingCodes.qrPairingCode;
-            commissioning.manualCode = server.state.commissioning.pairingCodes.manualPairingCode;
+            const fs = await import('fs');
+            const fabricCountFile = './data/matter-storage/heat-pump-controller/root.operationalCredentials.commissionedFabrics';
             
-            console.log("\n" + "=".repeat(80));
-            console.log("🏠 HOMEKIT/MATTER COMMISSIONING INFORMATION");
-            console.log("=".repeat(80));
-            console.log(`📱 Add this device to HomeKit by scanning the QR code below:`);
-            console.log(`📋 Manual Code: ${commissioning.manualCode}`);
-            console.log(`🌐 Web Interface: http://localhost:3000/matter/setup`);
-            console.log(`🔗 QR Code:`);
-            console.log(commissioning.qrCode);
-            console.log("=".repeat(80) + "\n");
+            // Watch for changes to the commissioned fabrics file
+            fs.watchFile(fabricCountFile, { interval: 1000 }, async (curr, prev) => {
+                try {
+                    const fabricCount = parseInt(await import('fs/promises').then(fsPromises => 
+                        fsPromises.readFile(fabricCountFile, 'utf8')
+                    ));
+                    const wasCommissioned = isCommissioned;
+                    isCommissioned = fabricCount > 0;
+                    
+                    if (!wasCommissioned && isCommissioned) {
+                        console.log('🎉 New fabric added - Device commissioned with HomeKit!');
+                        // Clear commissioning codes since device is now paired
+                        commissioning = {};
+                    } else if (wasCommissioned && !isCommissioned) {
+                        console.log('❌ Fabric removed - Device decommissioned from HomeKit');
+                    }
+                } catch (watchError) {
+                    console.log('Error watching fabric status:', watchError instanceof Error ? watchError.message : String(watchError));
+                }
+            });
+            console.log('✅ Set up fabric status monitoring via file system watcher');
         } catch (error) {
-            console.log("Ready for commissioning...");
-            console.log("Visit http://localhost:3000/matter/setup for commissioning information");
+            console.log('Unable to set up fabric file watcher:', error instanceof Error ? error.message : String(error));
         }
 
         return { server, commissioning, stateUpdateTimer };
